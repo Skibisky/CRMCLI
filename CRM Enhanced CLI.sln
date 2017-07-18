@@ -3,9 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CRMDocumentTemplates", "CRMDocumentTemplates\CRMDocumentTemplates.csproj", "{9367027B-09A7-4F0E-B9C6-1289B174F890}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLI.DocumentTemplates", "CRMDocumentTemplates\CLI.DocumentTemplates.csproj", "{9367027B-09A7-4F0E-B9C6-1289B174F890}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CRMCLI.DocumentTemplates", "CRMDocumentTemplates\CRMCLI.DocumentTemplates.csproj", "{AC44DE3F-E533-4E08-BD82-28123CDBC32F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DCE.DocumentTemplates", "CRMDocumentTemplates\DCE.DocumentTemplates.csproj", "{AC44DE3F-E533-4E08-BD82-28123CDBC32F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLI.SolutionDecompiler", "SolutionDecompiler\CLI.SolutionDecompiler.csproj", "{B9F21D4D-2DE8-497D-9DC1-DD6A084CA465}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CEC.Extensions", "CEC.Extensions\CEC.Extensions.csproj", "{EE779C4F-9BB4-497B-8057-E646B7C50F3E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +25,14 @@ Global
 		{AC44DE3F-E533-4E08-BD82-28123CDBC32F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AC44DE3F-E533-4E08-BD82-28123CDBC32F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AC44DE3F-E533-4E08-BD82-28123CDBC32F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9F21D4D-2DE8-497D-9DC1-DD6A084CA465}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9F21D4D-2DE8-497D-9DC1-DD6A084CA465}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9F21D4D-2DE8-497D-9DC1-DD6A084CA465}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9F21D4D-2DE8-497D-9DC1-DD6A084CA465}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE779C4F-9BB4-497B-8057-E646B7C50F3E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE779C4F-9BB4-497B-8057-E646B7C50F3E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE779C4F-9BB4-497B-8057-E646B7C50F3E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE779C4F-9BB4-497B-8057-E646B7C50F3E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,72 +1,33 @@
-﻿using Microsoft.Xrm.Sdk;
+﻿using CEC.Extensions;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using CRMEnhancedCLI;
+using CEC.DocumentTemplates.DCE;
 
-namespace CRMDocumentTemplates
+namespace CEC.DocumentTemplates.CLI
 {
-	class Program
+	class Program : ProgramBase
 	{
 		#region Arguments
-		static List<string> files = new List<string>();
 		static bool doUpload = false;
 		static bool doBackup = false;
 		static bool doRetrieve = false;
 		static bool doCompile = false;
 		static bool doDecompile = false;
-
-		static Dictionary<string, Func<string[], int>> commlines = new Dictionary<string, Func<string[], int>>()
+		
+		public override Dictionary<string, Func<string[], int>> getArgDic()
 		{
-			{"retrieve", (a) => {doRetrieve = true; return 0;}},
-			{"compile", (a) => {doCompile = true; return GetFiles(a);}},
-			{"decompile", (a) => {doDecompile = true; return GetFiles(a);}},
-			{"backup", (a) => {doBackup = true; return GetFiles(a);}},
-			{"upload", (a) => {doUpload = true; return GetFiles(a);}},
-			{"org", (a) => {return ConnectArgs(a);}},
-			{"help", (a) => {Help(); return 0;}}
-		};
-
-		static IOrganizationService OrgService = null;
-
-		static void ParseArgs(params string[] args)
-		{
-			int i = 0;
-			for (; i < args.Length; i++)
+			return new Dictionary<string, Func<string[], int>>()
 			{
-				if (args[i][0] == '-')
-				{
-					if (commlines.ContainsKey(args[i].Substring(1)))
-						i += commlines[args[i].Substring(1)].Invoke(args.Skip(i).ToArray());
-					else
-					{
-						var kv = commlines.Where(p => p.Key[0] == args[i][1]);
-						if (kv.Count() == 1)
-						{
-							var aa = args.Skip(i + 1).ToArray();
-							i += kv.FirstOrDefault().Value.Invoke(aa);
-						}
-						else
-						{
-							Console.WriteLine("Couldn't match:");
-							foreach (var p in kv)
-							{
-								Console.WriteLine("\t" + p.Key);
-							}
-						}
-					}
-				}
-				else if (File.Exists(args[i]))
-				{
-					Console.WriteLine("Adding file " + args[i]);
-					files.Add(args[i]);
-				}
-				else
-				{
-					Console.WriteLine("Ignoring " + args[i]);
-				}
-			}
+				{"retrieve", (a) => {doRetrieve = true; return 0;}},
+				{"compile", (a) => {doCompile = true; return GetFiles(a);}},
+				{"decompile", (a) => {doDecompile = true; return GetFiles(a);}},
+				{"backup", (a) => {doBackup = true; return GetFiles(a);}},
+				{"upload", (a) => {doUpload = true; return GetFiles(a);}},
+				{"org", (a) => {return ConnectArgs(a);}},
+				{"help", (a) => {Help(); return 0;}}
+			};
 		}
 		#endregion
 
@@ -91,6 +52,12 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 		{
 			try
 			{
+				var splash = "CRM Document Template tool prelease-" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+				Console.WriteLine(new string('=', splash.Length));
+				Console.WriteLine(splash);
+				Console.WriteLine(new string('-', splash.Length));
+				Console.WriteLine("From " + Environment.CurrentDirectory);
+
 				if (args.Length == 0)
 				{
 					Console.WriteLine("Enter arguments:");
@@ -126,6 +93,20 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 				}
 
 				if (doBackup)
+					Console.Write("Backup ");
+				if (doRetrieve)
+					Console.Write("Retrieve ");
+				if (doCompile)
+					Console.Write("Compile ");
+				if (doDecompile)
+					Console.Write("Decompile ");
+				if (doUpload)
+					Console.Write("Upload ");
+				Console.Write(files.Count + " files");
+
+				Console.WriteLine();
+
+				if (doBackup)
 				{
 					if (doRetrieve || files.Count == 0)
 					{
@@ -157,20 +138,23 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 				}
 
 				if (OrgService == null)
+				{
+					Console.WriteLine("Connection defaulting to localhost...");
 					OrgService = ExtensionMethods.Connect("http://localhost/");
+				}
 
 				if (doRetrieve)
-					DocumentTemplates.GetDocumentTemplates(OrgService, files?.ToArray());
+					DocumentTemplater.GetDocumentTemplates(OrgService, files?.ToArray());
 
 				if (doUpload && !doCompile && !doDecompile)
 				{
 					// try to auto determine what these are
 					foreach (var f in files)
 					{
-						if (File.Exists(f + ".docx"))
-							DocumentTemplates.DecompileTemplate(f);
+						if (File.Exists(f))
+							DocumentTemplater.DecompileTemplate(f);
 						else if (Directory.Exists(f))
-							DocumentTemplates.CompileTemplate(f);
+							DocumentTemplater.CompileTemplate(f);
 					}
 				}
 
@@ -178,14 +162,14 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 				{
 					foreach (var f in files)
 					{
-						DocumentTemplates.CompileTemplate(f);
+						DocumentTemplater.CompileTemplate(f);
 					}
 				}
 				else if (doDecompile)
 				{
 					foreach (var f in files)
 					{
-						DocumentTemplates.DecompileTemplate(f);
+						DocumentTemplater.DecompileTemplate(f);
 					}
 				}
 
@@ -193,7 +177,7 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 				{
 					foreach (var f in files)
 					{
-						DocumentTemplates.UploadTemplate(OrgService, f, doBackup);
+						DocumentTemplater.UploadTemplate(OrgService, f, doBackup);
 					}
 				}
 			}
@@ -208,32 +192,6 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 			}
 		}
 
-		static int ConnectArgs(string[] args)
-		{
-			Uri u;
-			if (!Uri.TryCreate(args[0], UriKind.Absolute, out u))
-				return 0;
-
-			if (args.Length == 1 || args[1][0] == '-')
-			{
-				OrgService = ExtensionMethods.Connect(args[0]);
-				return 1;
-			}
-			OrgService = ExtensionMethods.Connect(args[0], args[1], args[2]);
-			return 3;
-		}
-
-		static int GetFiles(string[] args)
-		{
-			int i = 0;
-			while (i < args.Length && args[i][0] != '-')
-			{
-				files.Add(args[i].Replace(".docx", ""));
-				Console.WriteLine("Adding file: " + args[i].Replace(".docx", ""));
-				i++;
-			}
-			return i;
-		}
 	}
 
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.Xrm.Sdk;
+﻿using CEC.Extensions;
+using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Client;
 using Microsoft.Xrm.Sdk.Query;
 using System;
@@ -7,9 +8,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
-namespace CRMEnhancedCLI
+namespace CEC.DocumentTemplates.DCE
 {
-	public static class DocumentTemplates
+	public static class DocumentTemplater
 	{
 		public static void GetDocumentTemplates(IOrganizationService orgService, params string[] files)
 		{
@@ -70,7 +71,7 @@ namespace CRMEnhancedCLI
 
 			using (ZipArchive zip = ZipFile.OpenRead(f.FullName))
 			{
-				Console.WriteLine("Extracting " + f.Name);
+				Console.WriteLine("Extracting " + f.Name + " to " + d.FullName.Replace(Environment.CurrentDirectory, ""));
 				if (Directory.Exists(d.FullName))
 					Directory.Delete(d.FullName, true);
 				zip.ExtractToDirectory(d.FullName);
@@ -121,12 +122,12 @@ namespace CRMEnhancedCLI
 			}
 			else
 			{
-				Console.Error.WriteLine("Failed to load " + d.Name);
+				Console.Error.WriteLine("Failed to load " + d.FullName.Replace(Environment.CurrentDirectory, ""));
 			}
 		}
 	}
 
-	class DocumentTemplate : CRMEnhancedCLI.ExtensionMethods.EntityNamed
+	class DocumentTemplate : CEC.Extensions.ExtensionMethods.EntityNamed
 	{
 		public DocumentTemplate() { }
 		public DocumentTemplate(Entity e)

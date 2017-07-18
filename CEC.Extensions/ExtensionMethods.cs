@@ -8,7 +8,7 @@ using System.Linq;
 using System.Net;
 using System.ServiceModel.Description;
 
-namespace CRMEnhancedCLI
+namespace CEC.Extensions
 {
 	public static class ExtensionMethods
 	{

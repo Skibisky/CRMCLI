@@ -7,8 +7,8 @@
     <ProjectGuid>{9367027B-09A7-4F0E-B9C6-1289B174F890}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CRMDocumentTemplates</RootNamespace>
-    <AssemblyName>CRMDocumentTemplates</AssemblyName>
+    <RootNamespace>CEC.DocumentTemplates.CLI</RootNamespace>
+    <AssemblyName>DocumentTemplates</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -32,29 +32,12 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Crm.Sdk.Proxy">
-      <HintPath>..\packages\Microsoft.CrmSdk.XrmTooling.PackageDeployment.PowerShell.8.2.0.4\tools\Microsoft.Crm.Sdk.Proxy.dll</HintPath>
-    </Reference>
     <Reference Include="Microsoft.Xrm.Sdk">
       <HintPath>..\packages\Microsoft.CrmSdk.XrmTooling.PackageDeployment.PowerShell.8.2.0.4\tools\Microsoft.Xrm.Sdk.dll</HintPath>
     </Reference>
-    <Reference Include="Microsoft.Xrm.Sdk.Deployment">
-      <HintPath>..\packages\Microsoft.CrmSdk.XrmTooling.PackageDeployment.PowerShell.8.2.0.4\tools\Microsoft.Xrm.Sdk.Deployment.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Xrm.Tooling.Connector">
-      <HintPath>..\packages\Microsoft.CrmSdk.XrmTooling.PackageDeployment.PowerShell.8.2.0.4\tools\Microsoft.Xrm.Tooling.Connector.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.IO.Compression" />
-    <Reference Include="System.IO.Compression.FileSystem" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -67,9 +50,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="CRMCLI.DocumentTemplates.csproj">
+    <ProjectReference Include="..\CEC.Extensions\CEC.Extensions.csproj">
+      <Project>{ee779c4f-9bb4-497b-8057-e646b7c50f3e}</Project>
+      <Name>CEC.Extensions</Name>
+    </ProjectReference>
+    <ProjectReference Include="DCE.DocumentTemplates.csproj">
       <Project>{ac44de3f-e533-4e08-bd82-28123cdbc32f}</Project>
-      <Name>CRMCLI.DocumentTemplates</Name>
+      <Name>DCE.DocumentTemplates</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
