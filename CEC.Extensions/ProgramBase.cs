@@ -79,7 +79,7 @@ namespace CEC.Extensions
 			int i = 0;
 			while (i < args.Length && args[i][0] != '-')
 			{
-				files.Add(args[i].Replace(".docx", ""));
+				files.Add(args[i]); // .Replace(".docx", "")
 				Console.WriteLine("Adding file: " + args[i].Replace(Environment.CurrentDirectory, ""));
 				i++;
 			}
