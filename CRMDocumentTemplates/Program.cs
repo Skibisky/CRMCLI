@@ -5,19 +5,16 @@ using System.IO;
 using System.Linq;
 using CEC.DocumentTemplates.DCE;
 
-namespace CEC.DocumentTemplates.CLI
-{
-	class Program : ProgramBase
-	{
+namespace CEC.DocumentTemplates.CLI {
+	class Program : ProgramBase {
 		#region Arguments
 		static bool doUpload = false;
 		static bool doBackup = false;
 		static bool doRetrieve = false;
 		static bool doCompile = false;
 		static bool doDecompile = false;
-		
-		public override Dictionary<string, Func<string[], int>> getArgDic()
-		{
+
+		protected override Dictionary<string, Func<string[], int>> getArgDic() {
 			return new Dictionary<string, Func<string[], int>>()
 			{
 				{"retrieve", (a) => {doRetrieve = true; return 0;}},
@@ -31,8 +28,7 @@ namespace CEC.DocumentTemplates.CLI
 		}
 		#endregion
 
-		static void Help()
-		{
+		static void Help() {
 			Console.WriteLine(@"Usage:
 CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [template1 ...]] [[-u | -r] template1 ...]
 	-h Help: Display this help
@@ -47,47 +43,43 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 ");
 		}
 
-		[STAThread]
-		static void Main(string[] args)
-		{
-			try
-			{
-				var splash = "CRM Document Template tool prelease-" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
-				Console.WriteLine(new string('=', splash.Length));
-				Console.WriteLine(splash);
-				Console.WriteLine(new string('-', splash.Length));
-				Console.WriteLine("From " + Environment.CurrentDirectory);
+		static void Main(string[] args) {
+			var splash = "CRM Document Template tool prelease-" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+			Console.WriteLine(new string('=', splash.Length));
+			Console.WriteLine(splash);
+			Console.WriteLine(new string('-', splash.Length));
+			Console.WriteLine("From " + Environment.CurrentDirectory);
 
-				if (args.Length == 0)
-				{
-					Console.WriteLine("Enter arguments:");
-					var comms = Console.ReadLine();
-					args = ExtensionMethods.SplitCommandLine(comms).ToArray();
-				}
-				if (args.Length == 0)
-				{
-					Help();
-					return;
-				}
+			if (args.Length == 0) {
+				Console.WriteLine("Enter arguments:");
+				var comms = Console.ReadLine();
+				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
+			}
+			if (args.Length == 0) {
+				Help();
+				return;
+			}
 
+			ParseArgs(typeof(Program), args);
+
+			if (files.Count > 0 && doRetrieve && !doUpload && !doBackup && !doCompile) {
+				Console.WriteLine("Do what with " + files.Count + " files?");
+				var comms = Console.ReadLine();
+				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
 				ParseArgs(args);
+			}
 
-				if (files.Count > 0 && doRetrieve && !doUpload && !doBackup && !doCompile)
-				{
-					Console.WriteLine("Do what with " + files.Count + " files?");
-					var comms = Console.ReadLine();
-					args = ExtensionMethods.SplitCommandLine(comms).ToArray();
-					ParseArgs(args);
-				}
+			BaseMain(args);
+		}
 
-				if (doRetrieve && doUpload)
-				{
+		protected override void SubMain() {
+			try {
+				if (doRetrieve && doUpload) {
 					Console.Error.WriteLine("Cannot retrieve and upload at the same time :(");
 					return;
 				}
 
-				if (doCompile && doDecompile)
-				{
+				if (doCompile && doDecompile) {
 					Console.Error.WriteLine("Cannot compile and decompile at the same time :(");
 					return;
 				}
@@ -106,18 +98,14 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 
 				Console.WriteLine();
 
-				if (doBackup)
-				{
-					if (doRetrieve || files.Count == 0)
-					{
+				if (doBackup) {
+					if (doRetrieve || files.Count == 0) {
 						// backup everything
 						new DirectoryInfo("Document Templates").ToZip("Template Backups\\Document Templates" + DateTime.Now.ToString("yyyyMMdd_HHmm"));
 						Console.WriteLine("Backed up working data");
 					}
-					else if (!doUpload || doDecompile)
-					{
-						foreach (var f in files)
-						{
+					else if (!doUpload || doDecompile) {
+						foreach (var f in files) {
 							Console.WriteLine("Backed up " + f);
 							DirectoryInfo d = null;
 							if (Directory.Exists("Document Templates/" + f))
@@ -137,20 +125,12 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 					}
 				}
 
-				if (OrgService == null)
-				{
-					Console.WriteLine("Connection defaulting to localhost...");
-					OrgService = ExtensionMethods.Connect("http://localhost/");
-				}
-
 				if (doRetrieve)
 					DocumentTemplater.GetDocumentTemplates(OrgService, files?.ToArray());
 
-				if (doUpload && !doCompile && !doDecompile)
-				{
+				if (doUpload && !doCompile && !doDecompile) {
 					// try to auto determine what these are
-					foreach (var f in files)
-					{
+					foreach (var f in files) {
 						if (File.Exists(f))
 							DocumentTemplater.DecompileTemplate(f);
 						else if (Directory.Exists(f))
@@ -158,35 +138,27 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 					}
 				}
 
-				if (doCompile)
-				{
-					foreach (var f in files)
-					{
+				if (doCompile) {
+					foreach (var f in files) {
 						DocumentTemplater.CompileTemplate(f);
 					}
 				}
-				else if (doDecompile)
-				{
-					foreach (var f in files)
-					{
+				else if (doDecompile) {
+					foreach (var f in files) {
 						DocumentTemplater.DecompileTemplate(f);
 					}
 				}
 
-				if (doUpload)
-				{
-					foreach (var f in files)
-					{
+				if (doUpload) {
+					foreach (var f in files) {
 						DocumentTemplater.UploadTemplate(OrgService, f, doBackup);
 					}
 				}
 			}
-			catch (Exception ex)
-			{
+			catch (Exception ex) {
 				Console.Error.WriteLine(ex.GetType() + ": " + ex.Message + Environment.NewLine + ex.StackTrace);
 			}
-			finally
-			{
+			finally {
 				Console.WriteLine("Finished all tasks");
 				Console.Read();
 			}

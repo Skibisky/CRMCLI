@@ -8,54 +8,43 @@ using System.Linq;
 using System.Net;
 using System.ServiceModel.Description;
 
-namespace CEC.Extensions
-{
-	public static class ExtensionMethods
-	{
-		public class OrgQuery
-		{
+namespace CEC.Extensions {
+	public static class ExtensionMethods {
+		public class OrgQuery {
 			private readonly IOrganizationService orgService;
-			private QueryExpression qe =  null;
+			private QueryExpression qe = null;
 
-			public OrgQuery(IOrganizationService service)
-			{
-				this.orgService = service;
+			public OrgQuery(IOrganizationService service) {
+				orgService = service;
 			}
 
-			public OrgQuery SetColumns(params string[] cols)
-			{
+			public OrgQuery SetColumns(params string[] cols) {
 				qe.ColumnSet = new ColumnSet(cols);
 				return this;
 			}
 
-			public OrgQuery SetColumns(bool allCols)
-			{
+			public OrgQuery SetColumns(bool allCols) {
 				qe.ColumnSet = new ColumnSet(allCols);
 				return this;
 			}
 
-			public OrgQuery AddConditions(params ConditionExpression[] conds)
-			{
+			public OrgQuery AddConditions(params ConditionExpression[] conds) {
 				qe.Criteria.Conditions.AddRange(conds);
 				return this;
 			}
 
-			public OrgQuery AddFilters(params FilterExpression[] filts)
-			{
+			public OrgQuery AddFilters(params FilterExpression[] filts) {
 				qe.Criteria.Filters.AddRange(filts);
 				return this;
 			}
 
-			public DataCollection<Entity> Retrieve()
-			{
+			public DataCollection<Entity> Retrieve() {
 				return orgService.RetrieveMultiple(qe).Entities;
 			}
 
-			public IEnumerable<T> Retrieve<T>() where T : Entity, new()
-			{
+			public IEnumerable<T> Retrieve<T>() where T : Entity, new() {
 				return orgService.RetrieveMultiple(qe).Entities
-					.Select(e => new T()
-					{
+					.Select(e => new T() {
 						Id = e.Id,
 						Attributes = e.Attributes,
 						LogicalName = e.LogicalName,
@@ -63,10 +52,8 @@ namespace CEC.Extensions
 			}
 		}
 
-		public class EntityNamed : Entity
-		{
-			public override string ToString()
-			{
+		public class EntityNamed : Entity {
+			public override string ToString() {
 				if (!string.IsNullOrWhiteSpace(GetAttributeValue<string>("name")))
 					return GetAttributeValue<string>("name");
 				else
@@ -74,18 +61,15 @@ namespace CEC.Extensions
 			}
 		}
 
-		public static OrgQuery GetItems(this IOrganizationService orgService, string logicalName, LogicalOperator baseOp = LogicalOperator.And)
-		{
+		public static OrgQuery GetItems(this IOrganizationService orgService, string logicalName, LogicalOperator baseOp = LogicalOperator.And) {
 			return new OrgQuery(orgService).SetColumns(true).AddFilters(new FilterExpression(baseOp));
 		}
 
-		public static IOrganizationService Connect(string crmuri, string user = null, string pass = null)
-		{
+		public static IOrganizationService Connect(string crmuri, string user = null, string pass = null) {
 			ClientCredentials creds = new ClientCredentials();
 			if (user == null)
 				creds.Windows.ClientCredential = CredentialCache.DefaultNetworkCredentials;
-			else
-			{
+			else {
 				creds.UserName.UserName = user;
 				creds.UserName.Password = pass;
 			}
@@ -94,29 +78,24 @@ namespace CEC.Extensions
 
 		// Sweet splits from
 		// https://stackoverflow.com/questions/298830/split-string-containing-command-line-parameters-into-string-in-c-sharp/298990#298990
-		public static IEnumerable<string> SplitCommandLine(string commandLine)
-		{
+		public static IEnumerable<string> SplitCommandLine(string commandLine) {
 			bool inQuotes = false;
 
-			return commandLine.Split(c =>
-				{
-					if (c == '\"')
-						inQuotes = !inQuotes;
+			return commandLine.Split(c => {
+				if (c == '\"')
+					inQuotes = !inQuotes;
 
-					return !inQuotes && c == ' ';
-				})
+				return !inQuotes && c == ' ';
+			})
 				.Select(arg => arg.Trim().TrimMatchingQuotes('\"'))
 				.Where(arg => !string.IsNullOrEmpty(arg));
 		}
 
-		public static IEnumerable<string> Split(this string str, Func<char, bool> controller)
-		{
+		public static IEnumerable<string> Split(this string str, Func<char, bool> controller) {
 			int nextPiece = 0;
 
-			for (int c = 0; c < str.Length; c++)
-			{
-				if (controller(str[c]))
-				{
+			for (int c = 0; c < str.Length; c++) {
+				if (controller(str[c])) {
 					yield return str.Substring(nextPiece, c - nextPiece);
 					nextPiece = c + 1;
 				}
@@ -125,8 +104,7 @@ namespace CEC.Extensions
 			yield return str.Substring(nextPiece);
 		}
 
-		public static string TrimMatchingQuotes(this string input, char quote)
-		{
+		public static string TrimMatchingQuotes(this string input, char quote) {
 			if ((input.Length >= 2) &&
 				(input[0] == quote) && (input[input.Length - 1] == quote))
 				return input.Substring(1, input.Length - 2);
@@ -134,8 +112,7 @@ namespace CEC.Extensions
 			return input;
 		}
 
-		public static string ToZip(this DirectoryInfo d, string zipName = null, string zipExt = "zip", string basepath = null)
-		{
+		public static string ToZip(this DirectoryInfo d, string zipName = null, string zipExt = "zip", string basepath = null) {
 			if (d == null)
 				throw new ArgumentNullException("Target Directory was null");
 			if (zipName == null)
@@ -159,13 +136,11 @@ namespace CEC.Extensions
 			DestFlder.CopyHere(items, 20);
 
 			// TODO: FIXME: stop waiting for explorer to finish zipping
-			do
-			{
+			do {
 				System.Threading.Thread.Sleep(260);
 			} while (new FileInfo(path).Length < 2 * 1024);
 
-			if (zipExt != "zip")
-			{
+			if (zipExt != "zip") {
 				File.Copy(path, Path.Combine(basepath, zipName + zipExt));
 				File.Delete(path);
 			}

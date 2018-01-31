@@ -8,12 +8,9 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 
-namespace CEC.DocumentTemplates.DCE
-{
-	public static class DocumentTemplater
-	{
-		public static void GetDocumentTemplates(IOrganizationService orgService, params string[] files)
-		{
+namespace CEC.DocumentTemplates.DCE {
+	public static class DocumentTemplater {
+		public static void GetDocumentTemplates(IOrganizationService orgService, params string[] files) {
 			if (orgService == null)
 				throw new ArgumentNullException("orgService", "Provided null Organization Service while attempting to Get Document Templates");
 
@@ -21,10 +18,8 @@ namespace CEC.DocumentTemplates.DCE
 
 			var req = orgService.GetItems("documenttemplate", LogicalOperator.Or);
 
-			if (files != null && files.Length > 0)
-			{
-				foreach (var f in files)
-				{
+			if (files != null && files.Length > 0) {
+				foreach (var f in files) {
 					var ff = new FileInfo(f);
 					req.AddConditions(new ConditionExpression("name", ConditionOperator.Equal, ff.Name.Replace(ff.Extension, "")));
 				}
@@ -32,12 +27,10 @@ namespace CEC.DocumentTemplates.DCE
 			docTemps.AddRange(req.Retrieve<DocumentTemplate>());
 
 			Directory.CreateDirectory("Document Templates");
-			foreach (var q in docTemps)
-			{
+			foreach (var q in docTemps) {
 				var location = "Document Templates/" + q["name"];
 				File.WriteAllBytes(location + ".zip", Convert.FromBase64String(q.Attributes["content"].ToString()));
-				using (ZipArchive zip = ZipFile.OpenRead("Document Templates/" + q["name"] + ".zip"))
-				{
+				using (ZipArchive zip = ZipFile.OpenRead("Document Templates/" + q["name"] + ".zip")) {
 					Console.WriteLine("Extracting " + q["name"]);
 					if (Directory.Exists(location))
 						Directory.Delete(location, true);
@@ -47,16 +40,14 @@ namespace CEC.DocumentTemplates.DCE
 			}
 		}
 
-		public static void CompileTemplate(string fname)
-		{
+		public static void CompileTemplate(string fname) {
 			DirectoryInfo d = null;
 			if (Directory.Exists("Document Templates/" + fname))
 				d = new DirectoryInfo("Document Templates/" + fname);
 			else if (Directory.Exists(fname))
 				d = new DirectoryInfo(fname);
 
-			if (d != null)
-			{
+			if (d != null) {
 				if (File.Exists(d.Name))
 					File.Delete(d.Name + ".docx");
 				d.ToZip(zipExt: ".docx");
@@ -64,13 +55,11 @@ namespace CEC.DocumentTemplates.DCE
 			}
 		}
 
-		public static void DecompileTemplate(string fname)
-		{
+		public static void DecompileTemplate(string fname) {
 			FileInfo f = new FileInfo(fname + ".docx");
 			DirectoryInfo d = new DirectoryInfo("Document Templates/" + f.Name.Replace(".docx", ""));
 
-			using (ZipArchive zip = ZipFile.OpenRead(f.FullName))
-			{
+			using (ZipArchive zip = ZipFile.OpenRead(f.FullName)) {
 				Console.WriteLine("Extracting " + f.Name + " to " + d.FullName.Replace(Environment.CurrentDirectory, ""));
 				if (Directory.Exists(d.FullName))
 					Directory.Delete(d.FullName, true);
@@ -78,22 +67,18 @@ namespace CEC.DocumentTemplates.DCE
 			}
 		}
 
-		public static void UploadTemplate(IOrganizationService orgService, string fname, bool backup = false)
-		{
+		public static void UploadTemplate(IOrganizationService orgService, string fname, bool backup = false) {
 			if (orgService == null)
 				throw new ArgumentNullException("orgService", "Provided null Organization Service while attempting to Upload Templates");
 
 			FileInfo d = new FileInfo(new FileInfo(fname).Name + ".docx");
 
-			if (File.Exists(d.FullName))
-			{
+			if (File.Exists(d.FullName)) {
 				var qw = orgService.RetrieveMultiple(new QueryExpression("documenttemplate") { ColumnSet = new ColumnSet(true) }).Entities
 					.FirstOrDefault(r => r.GetAttributeValue<string>("name") == d.Name.Replace(d.Extension, ""));
 
-				if (qw != null)
-				{
-					if (backup)
-					{
+				if (qw != null) {
+					if (backup) {
 						var uri = ((OrganizationServiceProxy)orgService).ServiceConfiguration.CurrentServiceEndpoint.ListenUri;
 						var loc = uri.Host + string.Join("_", uri.Segments.Take(2).Select(s => s.Replace("/", "")));
 
@@ -104,8 +89,7 @@ namespace CEC.DocumentTemplates.DCE
 					}
 
 					var newContent = Convert.ToBase64String(File.ReadAllBytes(d.Name));
-					if (newContent.Equals(qw["content"]))
-					{
+					if (newContent.Equals(qw["content"])) {
 						Console.WriteLine(d.Name + " is identical to server.");
 						return;
 					}
@@ -115,25 +99,21 @@ namespace CEC.DocumentTemplates.DCE
 					File.Delete(d.Name);
 					Console.WriteLine("Uploaded " + d.Name);
 				}
-				else
-				{
+				else {
 					Console.Error.WriteLine(d.Name + " not found on Server!");
 				}
 			}
-			else
-			{
+			else {
 				Console.Error.WriteLine("Failed to load " + d.FullName.Replace(Environment.CurrentDirectory, ""));
 			}
 		}
 	}
 
-	class DocumentTemplate : CEC.Extensions.ExtensionMethods.EntityNamed
-	{
+	class DocumentTemplate : CEC.Extensions.ExtensionMethods.EntityNamed {
 		public DocumentTemplate() { }
-		public DocumentTemplate(Entity e)
-		{
-			this.Id = e.Id;
-			this.Attributes = e.Attributes;
+		public DocumentTemplate(Entity e) {
+			Id = e.Id;
+			Attributes = e.Attributes;
 		}
 	}
 }

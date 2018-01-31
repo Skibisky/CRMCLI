@@ -4,18 +4,19 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using System.Xml;
-using System.Xml.Serialization;
 
 namespace SolutionDecompiler {
 	class Program : ProgramBase {
+
 		static void Main(string[] args) {
-			//ParseArgs(args);
+			BaseMain(args);
+		}
+
+		protected override void SubMain() {
 			try {
 				Console.WriteLine("Decompiling Solution");
-				GetFiles(args);
 				var doc = new XmlDocument();
 
 				foreach (var f in files) {
@@ -226,7 +227,7 @@ namespace SolutionDecompiler {
 					i--;
 					var e = nodes.Cast<XmlNode>().ElementAt(i);
 					try {
-						var name = e["name"].InnerText.Replace("/","_").Replace("\\", "");
+						var name = e["name"].InnerText.Replace("/", "_").Replace("\\", "");
 						var id = e["connectionroleid"].InnerText;
 						WriteElement(e, name, "ConnectionRoles/" + name + "_" + id + ".xml");
 						var xlink = doc.CreateElement("ConnectionRoleLink");
@@ -282,9 +283,9 @@ namespace SolutionDecompiler {
 			}
 		}
 
-		public override Dictionary<string, Func<string[], int>> getArgDic() {
+		protected override Dictionary<string, Func<string[], int>> getArgDic() {
 			return new Dictionary<string, Func<string[], int>>() {
-				{ "decompile", (a)=> { return GetFiles(a); } }
+				{ "decompile", (a) => { return GetFiles(a); } }
 			};
 		}
 	}
