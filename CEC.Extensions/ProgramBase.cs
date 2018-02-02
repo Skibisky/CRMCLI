@@ -11,6 +11,7 @@ namespace CEC.Extensions {
 		private static IOrganizationService orgService = null;
 		protected static IOrganizationService OrgService { get { return orgService; } }
 		static bool argsParsed = false;
+		protected static bool autoConnect = true;
 
 		private static ProgramBase _single = null;
 		private static ProgramBase Single {
@@ -36,7 +37,7 @@ namespace CEC.Extensions {
 
 		protected static void BaseMain(string[] args) {
 			ParseArgs(args);
-			if (OrgService == null) {
+			if (OrgService == null && autoConnect) {
 				Console.WriteLine("Connection defaulting to localhost...");
 				orgService = ExtensionMethods.Connect("http://localhost");
 			}
