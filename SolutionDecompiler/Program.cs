@@ -17,6 +17,8 @@ namespace SolutionDecompiler {
 
 		bool? direction = null;
 
+		public static readonly Encoding OutEncoding = Encoding.UTF8;
+
 		protected override Dictionary<string, Func<string[], int>> getArgDic() {
 			return new Dictionary<string, Func<string[], int>>() {
 				{ "decompile", (a) => { direction = false; return GetFiles(a); } },
@@ -34,7 +36,7 @@ namespace SolutionDecompiler {
 				else if (direction.Value) {
 					foreach (var f in files) {
 						Console.WriteLine("Loading " + f);
-						doc.Load(f);
+						doc.Load(Path.ChangeExtension(f, ".out.xml"));
 
 						PackEntities(doc);
 						PackRoles(doc);
@@ -42,9 +44,12 @@ namespace SolutionDecompiler {
 						PackConnectionRoles(doc);
 						PackEntityMap(doc);
 						PackEntityRelationships(doc);
+						PackReports(doc);
+						PackWebResources(doc);
 
 						// recompile the customizations.xml
-						WriteDoc(doc, "lmao." + f);
+						WriteDoc(doc, Path.ChangeExtension(f, ".in.xml"));
+						SlamDoc(Path.ChangeExtension(f, ".in.xml"));
 					}
 				}
 				else {
@@ -63,11 +68,11 @@ namespace SolutionDecompiler {
 						ExtractConnectionRoles(doc);
 						ExtractEntityMap(doc);
 						ExtractEntityRelationships(doc);
-						ExtractWebResources(doc);
 						ExtractReports(doc);
+						ExtractWebResources(doc);
 
 						// recompile the customizations.xml
-						WriteDoc(doc, f);
+						WriteDoc(doc, Path.ChangeExtension(f, ".out.xml"));
 					}
 				}
 			}
@@ -84,7 +89,7 @@ namespace SolutionDecompiler {
 
 		private static void WriteDoc(XmlDocument doc, string f) {
 			using (FileStream fs = new FileStream(f, FileMode.Create))
-			using (XmlTextWriter wr = new XmlTextWriter(fs, Encoding.UTF8)) {
+			using (XmlTextWriter wr = new XmlTextWriter(fs, OutEncoding)) {
 				XmlDocument tdoc = new XmlDocument();
 				tdoc.LoadXml(doc.OuterXml);
 				wr.Formatting = Formatting.Indented;
@@ -92,6 +97,61 @@ namespace SolutionDecompiler {
 				wr.Flush();
 				fs.Flush();
 				Console.WriteLine("Wrote " + f + " to file");
+			}
+		}
+
+		private static void SlamDoc(string f) {
+			var lines = File.ReadAllLines(f);
+			var outlines = new List<string>();
+			for (int i = 0; i < lines.Length - 1; i++) {
+				var l = lines[i];
+				var t = l.Trim();
+				var tsind = t.IndexOf(' ');
+				var tt = tsind == -1 ? t : t.Substring(0, tsind);
+				var nl = lines[i + 1];
+				var nt = nl.Trim();
+				if ("/" + tt.Replace("<", "").Replace(">", "") == nt.Replace("<", "").Replace(">", "")) {
+					outlines.Add(l + nt);
+					i++;
+				}
+				else {
+					outlines.Add(l);
+				}
+			}
+			outlines.Add(lines.Last());
+			File.WriteAllText(Path.ChangeExtension(f, ".test.xml"), string.Join("\r\n", outlines.ToArray()));
+		}
+
+		private static XmlNode ReadElement(XmlNode parent, string path) {
+			var doc = (parent as XmlDocument) ?? parent.OwnerDocument;
+
+			using (FileStream fs = new FileStream(path, FileMode.Open))
+			using (XmlReader rd = XmlTextReader.Create(fs)) {
+				var qw = rd.Read();
+				var on = doc.CreateNode(XmlNodeType.Element, rd.Name, rd.NamespaceURI);
+				on.InnerXml = rd.ReadOuterXml();
+				var n = doc.CreateNode(XmlNodeType.Element, on.Name, rd.NamespaceURI);
+				n.InnerXml = on.FirstChild.InnerXml;
+				var sz = on.FirstChild.Attributes.Count;
+				for (int i = 0; i < sz; i++) {
+					n.Attributes.Append(on.FirstChild.Attributes[0]);
+				}
+				parent.AppendChild(n);
+				Console.WriteLine("Read " + path + " to xml.");
+				return n;
+			}
+		}
+
+		private static void WriteElement(XmlNode e, string name, string path) {
+			using (FileStream fs = new FileStream(path, FileMode.Create))
+			using (XmlTextWriter wr = new XmlTextWriter(fs, OutEncoding)) {
+				XmlDocument tdoc = new XmlDocument();
+				tdoc.LoadXml(e.OuterXml);
+				wr.Formatting = Formatting.Indented;
+				tdoc.WriteContentTo(wr);
+				wr.Flush();
+				fs.Flush();
+				Console.WriteLine("Wrote " + name + " to file");
 			}
 		}
 
@@ -103,10 +163,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("Entity");
 				Console.WriteLine("Entities has " + nodes.Count + " <Entity>.");
 				Directory.CreateDirectory("entities");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e["Name"].InnerText;
 						WriteElement(e, name, "entities/" + name + ".xml");
@@ -130,10 +188,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("EntityLink");
 				Console.WriteLine("Entities has " + nodes.Count + " <EntityLink>.");
 				//Directory.CreateDirectory("entities");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e.InnerText;
 						ReadElement(xCol, name);
@@ -154,10 +210,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("Role");
 				Console.WriteLine("Roles has " + nodes.Count + " <Role>.");
 				Directory.CreateDirectory("roles");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e.Attributes["name"].Value;
 						var id = e.Attributes["id"].Value;
@@ -182,10 +236,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("RoleLink");
 				Console.WriteLine("Roles has " + nodes.Count + " <RoleLink>.");
 				//Directory.CreateDirectory("roles");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e.InnerText;
 						ReadElement(xCol, name);
@@ -206,10 +258,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("Workflow");
 				Console.WriteLine("Workflows has " + nodes.Count + " <Workflow>.");
 				Directory.CreateDirectory("Workflows");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e.Attributes["Name"].Value.Replace("\"", "");
 						var id = e.Attributes["WorkflowId"].Value;
@@ -234,10 +284,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("WorkflowLink");
 				Console.WriteLine("Workflows has " + nodes.Count + " <WorkflowLink>.");
 				//Directory.CreateDirectory("roles");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e.InnerText;
 						ReadElement(xCol, name);
@@ -258,10 +306,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("ConnectionRole");
 				Console.WriteLine("ConnectionRoles has " + nodes.Count + " <ConnectionRole>.");
 				Directory.CreateDirectory("ConnectionRoles");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e["name"].InnerText.Replace("/", "_").Replace("\\", "");
 						var id = e["connectionroleid"].InnerText;
@@ -286,10 +332,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("ConnectionRoleLink");
 				Console.WriteLine("ConnectionRoles has " + nodes.Count + " <ConnectionRoleLink>.");
 				//Directory.CreateDirectory("ConnectionRoles");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e.InnerText;
 						ReadElement(xCol, name);
@@ -345,10 +389,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("EntityRelationship");
 				Console.WriteLine("EntityRelationships has " + nodes.Count + " <EntityRelationship>.");
 				Directory.CreateDirectory("EntityRelationships");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e.Attributes["Name"].Value;
 						WriteElement(e, name, "EntityRelationships/" + name + ".xml");
@@ -371,11 +413,8 @@ namespace SolutionDecompiler {
 				var xCol = (XmlElement)nodeCols.Item(0);
 				var nodes = xCol.GetElementsByTagName("EntityRelationshipLink");
 				Console.WriteLine("EntityRelationships has " + nodes.Count + " <EntityRelationshipLink>.");
-				//Directory.CreateDirectory("EntityRelationships");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e.InnerText;
 						ReadElement(xCol, name);
@@ -388,6 +427,64 @@ namespace SolutionDecompiler {
 			}
 		}
 
+		private static void ExtractReports(XmlDocument doc) {
+			var nodeCols = doc.GetElementsByTagName("Reports");
+			Console.WriteLine("XML has " + nodeCols.Count + " <Reports>, 1 would be nice.");
+			if (nodeCols.Count > 0) {
+				var xCol = (XmlElement)nodeCols.Item(0);
+				var nodes = xCol.GetElementsByTagName("Report");
+				Console.WriteLine("Reports has " + nodes.Count + " <Report>.");
+				Directory.CreateDirectory("Reports");
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
+					try {
+						var name = e["name"].InnerText.Replace("/", "_").Replace("\\", "");
+						var id = e["reportid"].InnerText;
+						WriteElement(e, name, "Reports/" + name + "_" + id + ".xml");
+						var xlink = doc.CreateElement("ReportLink");
+						xlink.InnerText = "Reports/" + name + "_" + id + ".xml";
+						xCol.RemoveChild(e);
+						xCol.AppendChild(xlink);
+					}
+					catch (Exception ex) {
+						Console.WriteLine(ex.GetType() + " during Reports disassemble.\r\n" + ex.Message);
+					}
+				}
+			}
+		}
+
+		private static void PackReports(XmlDocument doc) {
+			var nodeCols = doc.GetElementsByTagName("Reports");
+			Console.WriteLine("XML has " + nodeCols.Count + " <Reports>, 1 would be nice.");
+			if (nodeCols.Count > 0) {
+				var xCol = (XmlElement)nodeCols.Item(0);
+				var nodes = xCol.GetElementsByTagName("ReportLink");
+				Console.WriteLine("Reports has " + nodes.Count + " <ReportLink>.");
+				var invalidP = xCol.GetElementsByTagName("ReportLinks").Item(0);
+				int i = 0;
+				XmlNode lastNode = null;
+				while (nodes.Cast<XmlNode>().Count() > i) {
+					var e = nodes.Cast<XmlNode>().ElementAt(i);
+					try {
+						if (!string.IsNullOrWhiteSpace(e.InnerText) && File.Exists(e.InnerText)) {
+							var name = e.InnerText;
+							lastNode = ReadElement(xCol, name);
+							xCol.RemoveChild(e);
+						}
+						else {
+							i++;
+						}
+					}
+					catch (Exception ex) {
+						Console.WriteLine(ex.GetType() + " during Reports assemble.\r\n" + ex.Message);
+					}
+				}
+				xCol.InsertAfter(invalidP, lastNode);
+
+			}
+		}
+
+
 		private static void ExtractWebResources(XmlDocument doc) {
 			var nodeCols = doc.GetElementsByTagName("WebResources");
 			Console.WriteLine("XML has " + nodeCols.Count + " <WebResources>, 1 would be nice.");
@@ -396,10 +493,8 @@ namespace SolutionDecompiler {
 				var nodes = xCol.GetElementsByTagName("WebResource");
 				Console.WriteLine("WebResources has " + nodes.Count + " <WebResource>.");
 				Directory.CreateDirectory("WebResources");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e["Name"].InnerText;
 						var id = e["WebResourceId"].InnerText;
@@ -417,64 +512,24 @@ namespace SolutionDecompiler {
 			}
 		}
 
-		private static void ExtractReports(XmlDocument doc) {
-			var nodeCols = doc.GetElementsByTagName("Reports");
-			Console.WriteLine("XML has " + nodeCols.Count + " <Reports>, 1 would be nice.");
+		private static void PackWebResources(XmlDocument doc) {
+			var nodeCols = doc.GetElementsByTagName("WebResources");
+			Console.WriteLine("XML has " + nodeCols.Count + " <WebResources>, 1 would be nice.");
 			if (nodeCols.Count > 0) {
 				var xCol = (XmlElement)nodeCols.Item(0);
-				var nodes = xCol.GetElementsByTagName("Report");
-				Console.WriteLine("Reports has " + nodes.Count + " <Report>.");
-				Directory.CreateDirectory("Reports");
-				int i = nodes.Cast<XmlNode>().Count();
-				for (; i > 0;) {
-					i--;
-					var e = nodes.Cast<XmlNode>().ElementAt(i);
+				var nodes = xCol.GetElementsByTagName("WebResourceLink");
+				Console.WriteLine("WebResources has " + nodes.Count + " <WebResourceLink>.");
+				while (nodes.Cast<XmlNode>().Any()) {
+					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
-						var name = e["name"].InnerText.Replace("/", "_").Replace("\\", "");
-						var id = e["reportid"].InnerText;
-						WriteElement(e, name, "Reports/" + name + "_" + id + ".xml");
-						var xlink = doc.CreateElement("ReportLink");
-						xlink.InnerText = "Reports/" + name + "_" + id + ".xml";
+						var name = e.InnerText;
+						ReadElement(xCol, name);
 						xCol.RemoveChild(e);
-						xCol.AppendChild(xlink);
 					}
 					catch (Exception ex) {
-						Console.WriteLine(ex.GetType() + " during Reports disassemble.\r\n" + ex.Message);
+						Console.WriteLine(ex.GetType() + " during WebResource assemble.\r\n" + ex.Message);
 					}
 				}
-			}
-		}
-
-		private static XmlNode ReadElement(XmlNode parent, string path) {
-			var doc = (parent as XmlDocument) ?? parent.OwnerDocument;
-
-			using (FileStream fs = new FileStream(path, FileMode.Open))
-			using (XmlReader rd = XmlTextReader.Create(fs)) {
-				var qw = rd.Read();
-				var on = doc.CreateNode(XmlNodeType.Element, rd.Name, rd.NamespaceURI);
-				on.InnerXml = rd.ReadOuterXml();
-				var n = doc.CreateNode(XmlNodeType.Element, on.Name, rd.NamespaceURI);
-				n.InnerXml = on.FirstChild.InnerXml;
-				var sz = on.FirstChild.Attributes.Count;
-				for (int i = 0; i < sz; i++) {
-					n.Attributes.Append(on.FirstChild.Attributes[0]);
-				}
-				parent.AppendChild(n);
-				return n;
-			}
-		}
-
-		private static void WriteElement(XmlNode e, string name, string path) {
-			using (FileStream fs = new FileStream(path, FileMode.Create))
-			using (XmlTextWriter wr = new XmlTextWriter(fs, Encoding.UTF8)) {
-				XmlDocument tdoc = new XmlDocument();
-				tdoc.LoadXml(e.OuterXml);
-				wr.Formatting = Formatting.Indented;
-				wr.Settings.Encoding = Encoding.UTF8;
-				tdoc.WriteContentTo(wr);
-				wr.Flush();
-				fs.Flush();
-				Console.WriteLine("Wrote " + name + " to file");
 			}
 		}
 
