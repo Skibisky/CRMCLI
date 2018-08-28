@@ -17,12 +17,15 @@ namespace SolutionDecompiler {
 
 		bool? direction = null;
 
+		static bool explodeEntities = false;
+
 		public static readonly Encoding OutEncoding = Encoding.UTF8;
 
 		protected override Dictionary<string, Func<string[], int>> getArgDic() {
 			return new Dictionary<string, Func<string[], int>>() {
 				{ "decompile", (a) => { direction = false; return GetFiles(a); } },
 				{ "compile", (a) => { direction = true; return GetFiles(a); } },
+				{ "explode", (a) => { explodeEntities = true; return 0; } },
 			};
 		}
 
@@ -143,6 +146,9 @@ namespace SolutionDecompiler {
 		}
 
 		private static void WriteElement(XmlNode e, string name, string path) {
+			/*var d = Path.GetDirectoryName(path);
+			Console.WriteLine(path + ": " + d);
+			Directory.CreateDirectory(d);*/
 			using (FileStream fs = new FileStream(path, FileMode.Create))
 			using (XmlTextWriter wr = new XmlTextWriter(fs, OutEncoding)) {
 				XmlDocument tdoc = new XmlDocument();
@@ -167,6 +173,8 @@ namespace SolutionDecompiler {
 					var e = nodes.Cast<XmlNode>().ElementAt(0);
 					try {
 						var name = e["Name"].InnerText;
+						if (explodeEntities)
+							ExtractEntity(e as XmlElement);
 						WriteElement(e, name, "entities/" + name + ".xml");
 						var xlink = doc.CreateElement("EntityLink");
 						xlink.InnerText = "entities/" + name + ".xml";
@@ -177,6 +185,56 @@ namespace SolutionDecompiler {
 						Console.WriteLine(ex.GetType() + " during entity disassemble.\r\n" + ex.Message);
 					}
 				}
+			}
+		}
+
+		private static void ExtractEntity(XmlElement entNode) {
+			var dir = new DirectoryStack("entities");
+			var name = entNode["Name"].InnerText;
+			dir.Push(name);
+			Directory.CreateDirectory(dir);
+			var xCol = (XmlElement)entNode.GetElementsByTagName("attributes")[0];
+			if (xCol != null) {
+				var nodes = xCol.GetElementsByTagName("attribute").Cast<XmlElement>();
+				dir.Push("attributes");
+				Directory.CreateDirectory(dir);
+				while (nodes.Any()) {
+					var e = nodes.ElementAt(0);
+					var attr = e.GetAttribute("PhysicalName");
+					WriteElement(e, attr, dir + "/" + attr + ".xml");
+					var xlink = entNode.OwnerDocument.CreateElement("AttributeLink");
+					xlink.InnerText = dir + "/" + attr + ".xml";
+					xCol.RemoveChild(e);
+					xCol.AppendChild(xlink);
+				}
+				dir.Pop();
+			}
+
+			PullNodeFromEntity("forms", "systemform", entNode, dir);
+			PullNodeFromEntity("savedqueries", "savedquery", entNode, dir);
+			PullNodeFromEntity("Visualizations", "visualization", entNode, dir);
+		}
+
+		private static void PullNodeFromEntity(string outernode, string innernodes, XmlElement entNode, DirectoryStack dir) {
+			var tdir = outernode;
+			foreach (var xCol in entNode.GetElementsByTagName(outernode).Cast<XmlElement>()) { 
+				var nodes = xCol.GetElementsByTagName(innernodes).Cast<XmlElement>();
+				if (outernode == "forms") {
+					tdir = outernode + "_" + xCol.GetAttribute("type");
+				}
+				dir.Push(tdir);
+				Directory.CreateDirectory(dir);
+				while (nodes.Any()) {
+					var e = nodes.ElementAt(0);
+					var query = (e.GetElementsByTagName("LocalizedName")[0] as XmlElement).GetAttribute("description");
+					query = new string(query.Where(c => !Path.GetInvalidPathChars().Contains(c) && !"?:\\/".Contains(c)).ToArray());
+					WriteElement(e, query, dir + "/" + query + ".xml");
+					var xlink = entNode.OwnerDocument.CreateElement(innernodes + "Link");
+					xlink.InnerText = dir + "/" + query + ".xml";
+					xCol.RemoveChild(e);
+					xCol.AppendChild(xlink);
+				}
+				dir.Pop();
 			}
 		}
 
@@ -250,6 +308,8 @@ namespace SolutionDecompiler {
 			}
 		}
 
+		private static string killChars = "\\\"?/<>:";
+
 		private static void ExtractWorkflows(XmlDocument doc) {
 			var nodeCols = doc.GetElementsByTagName("Workflows");
 			Console.WriteLine("XML has " + nodeCols.Count + " <Workflows>, 1 would be nice.");
@@ -260,9 +320,14 @@ namespace SolutionDecompiler {
 				Directory.CreateDirectory("Workflows");
 				while (nodes.Cast<XmlNode>().Any()) {
 					var e = nodes.Cast<XmlNode>().ElementAt(0);
+					string id = "";
+					string name = "";
 					try {
-						var name = e.Attributes["Name"].Value.Replace("\"", "");
-						var id = e.Attributes["WorkflowId"].Value;
+						name = e.Attributes["Name"].Value;
+						foreach (var c in killChars) {
+							name = name.Replace("" + c, "");
+						}
+						id = e.Attributes["WorkflowId"].Value;
 						WriteElement(e, name, "Workflows/" + name + "_" + id + ".xml");
 						var xlink = doc.CreateElement("WorkflowLink");
 						xlink.InnerText = "Workflows/" + name + "_" + id + ".xml";
@@ -270,7 +335,7 @@ namespace SolutionDecompiler {
 						xCol.AppendChild(xlink);
 					}
 					catch (Exception ex) {
-						Console.WriteLine(ex.GetType() + " during workflow disassemble.\r\n" + ex.Message);
+						Console.WriteLine(ex.GetType() + " during workflow " + "Workflows/" + name + "_" + id + ".xml" + " disassemble.\r\n" + ex.Message);
 					}
 				}
 			}
@@ -354,9 +419,10 @@ namespace SolutionDecompiler {
 				try {
 					WriteElement(xCol, "EntityMap", "EntityMap.xml");
 					var xlink = doc.CreateElement("EntityMapLink");
+					var xafter = doc.GetElementsByTagName("Templates")[0];
 					xlink.InnerText = "EntityMap.xml";
 					doc.FirstChild.RemoveChild(xCol);
-					doc.FirstChild.AppendChild(xlink);
+					doc.FirstChild.InsertAfter(xlink, xafter);
 				}
 				catch (Exception ex) {
 					Console.WriteLine(ex.GetType() + " during EntityMaps disassemble.\r\n" + ex.Message);
@@ -365,14 +431,15 @@ namespace SolutionDecompiler {
 		}
 
 		private static void PackEntityMap(XmlDocument doc) {
-			var nodeCols = doc.GetElementsByTagName("SiteMap");
-			Console.WriteLine("XML has " + nodeCols.Count + " <SiteMap>, 2 would be nice.");
+			var nodeCols = doc.GetElementsByTagName("EntityMapLink");
+			Console.WriteLine("XML has " + nodeCols.Count + " <EntityMapLink>, 1 would be nice.");
 			if (nodeCols.Count > 0) {
 				var xCol = (XmlElement)nodeCols.Item(0);
 				try {
 					var xlink = doc.GetElementsByTagName("EntityMapLink")[0];
 					var n = ReadElement(doc.FirstChild, xlink.InnerText);
-					doc.FirstChild.InsertAfter(n, xCol);
+					//var xafter = doc.GetElementsByTagName("Templates")[0];
+					doc.FirstChild.InsertAfter(n, xlink);
 					doc.FirstChild.RemoveChild(xlink);
 				}
 				catch (Exception ex) {
