@@ -7,7 +7,7 @@ using System.Linq;
 namespace CEC.Extensions {
 	public abstract class ProgramBase {
 		protected abstract Dictionary<string, Func<string[], int>> getArgDic();
-		protected static readonly List<string> files = new List<string>();
+		protected static readonly HashSet<string> files = new HashSet<string>();
 		private static IOrganizationService orgService = null;
 		protected static IOrganizationService OrgService { get { return orgService; } }
 		static bool argsParsed = false;

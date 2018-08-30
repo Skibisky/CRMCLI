@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CEC.Extensions</RootNamespace>
     <AssemblyName>CEC.Extensions</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -34,7 +35,7 @@
       <HintPath>..\packages\Microsoft.CrmSdk.XrmTooling.PackageDeployment.PowerShell.8.2.0.4\tools\Microsoft.Crm.Sdk.Proxy.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Xrm.Sdk">
-      <HintPath>..\packages\Microsoft.CrmSdk.XrmTooling.PackageDeployment.PowerShell.8.2.0.4\tools\Microsoft.Xrm.Sdk.dll</HintPath>
+      <HintPath>..\..\..\..\..\CRM_Related\2016\SDK\Bin\Microsoft.Xrm.Sdk.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Xrm.Sdk.Deployment">
       <HintPath>..\packages\Microsoft.CrmSdk.XrmTooling.PackageDeployment.PowerShell.8.2.0.4\tools\Microsoft.Xrm.Sdk.Deployment.dll</HintPath>
