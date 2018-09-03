@@ -19,10 +19,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLI.EarlyboundShrinker", "C
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLI.CustomisationDownloader", "CLI.CustomisationDownloader\CLI.CustomisationDownloader.csproj", "{D48FDEE2-516D-438C-8D1A-2EF400F7C7C0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CEC", "CEC\CEC.csproj", "{E9413536-B91F-47AF-948F-C19993FA15BD}"
+EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -60,6 +59,10 @@ Global
 		{D48FDEE2-516D-438C-8D1A-2EF400F7C7C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D48FDEE2-516D-438C-8D1A-2EF400F7C7C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D48FDEE2-516D-438C-8D1A-2EF400F7C7C0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9413536-B91F-47AF-948F-C19993FA15BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9413536-B91F-47AF-948F-C19993FA15BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9413536-B91F-47AF-948F-C19993FA15BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9413536-B91F-47AF-948F-C19993FA15BD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -8,10 +8,12 @@ namespace CEC.Extensions {
 	public abstract class ProgramBase {
 		protected abstract Dictionary<string, Func<string[], int>> getArgDic();
 		protected static readonly HashSet<string> files = new HashSet<string>();
-		private static IOrganizationService orgService = null;
-		protected static IOrganizationService OrgService { get { return orgService; } }
+		protected static IOrganizationService orgService = null;
+		public static IOrganizationService OrgService { get { return orgService; } }
 		static bool argsParsed = false;
 		protected static bool autoConnect = true;
+
+		protected static string argsPrefix = "-";
 
 		private static ProgramBase _single = null;
 		private static ProgramBase Single {
@@ -60,11 +62,11 @@ namespace CEC.Extensions {
 		protected static void ParseArgs(Dictionary<string, Func<string[], int>> commlines, params string[] args) {
 			int i = 0;
 			for (; i < args.Length; i++) {
-				if (args[i][0] == '-') {
-					if (commlines.ContainsKey(args[i].Substring(1)))
-						i += commlines[args[i].Substring(1)].Invoke(args.Skip(i).ToArray());
+				if (string.IsNullOrWhiteSpace(argsPrefix) || args[i].StartsWith(argsPrefix)) {
+					if (commlines.ContainsKey(args[i].Substring(argsPrefix.Length)))
+						i += commlines[args[i].Substring(argsPrefix.Length)].Invoke(args.Skip(i).ToArray());
 					else {
-						var kv = commlines.Where(p => p.Key[0] == args[i][1]);
+						var kv = commlines.Where(p => p.Key[0] == args[i][argsPrefix.Length]);
 						if (kv.Count() == 1) {
 							var aa = args.Skip(i + 1).ToArray();
 							i += kv.FirstOrDefault().Value.Invoke(aa);
