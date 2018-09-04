@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Client;
 using Microsoft.Xrm.Sdk.Query;
+using Microsoft.Xrm.Tooling.Connector;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -66,6 +67,7 @@ namespace CEC.Extensions {
 		}
 
 		public static IOrganizationService Connect(string crmuri, string user = null, string pass = null) {
+			System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
 			ClientCredentials creds = new ClientCredentials();
 			if (user == null)
 				creds.Windows.ClientCredential = CredentialCache.DefaultNetworkCredentials;
@@ -73,7 +75,15 @@ namespace CEC.Extensions {
 				creds.UserName.UserName = user;
 				creds.UserName.Password = pass;
 			}
-			return new OrganizationServiceProxy(new Uri(crmuri + "/XRMServices/2011/Organization.svc"), null, creds, null);
+			
+			try {
+				return new OrganizationServiceProxy(new Uri(crmuri + "/XRMServices/2011/Organization.svc"), null, creds, null);
+			}
+			catch {
+				return new CrmServiceClient($"AuthType=Office365; Url={crmuri}; UserName={user}; Password={pass}");
+				var u = new Uri(crmuri);
+				return new CrmServiceClient(new NetworkCredential(user, pass), u.Host, u.Port.ToString(), u.Host.Substring(0, u.Host.IndexOf(".")));
+			}
 		}
 
 		// Sweet splits from
