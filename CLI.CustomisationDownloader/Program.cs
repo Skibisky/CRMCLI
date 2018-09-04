@@ -108,10 +108,10 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 				Filename = "filename",
 				Data = "name",
 				Query = new QueryExpression("report") {
-						ColumnSet = new ColumnSet("name", "filename", "name"),
+						ColumnSet = new ColumnSet("name", "filename"),
 						//ColumnSet = new ColumnSet(true),
 					},
-				Process = PrettyXml
+				Process = ReportDownload
 				}
 			},
 			{ "javascript", new DownloadTarget() {
@@ -129,6 +129,18 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 						}
 					},
 				Process = (d, e) => Encoding.Default.GetString(Convert.FromBase64String(d)),
+				}
+			},
+			{ "importmaps", new DownloadTarget() {
+				Name = "name",
+				Filename = "name",
+				FileExten = "xml",
+				Data = "name",
+				Query = new QueryExpression("importmap") {
+						ColumnSet = new ColumnSet("name"),
+						//ColumnSet = new ColumnSet(true),
+					},
+				Process = ImportMapDownload
 				}
 			},
 		};
@@ -157,14 +169,14 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 						Count = 50,
 						PageNumber = 1,
 					};
-
 					var entList = new List<Entity>();
 
 					EntityCollection entRes = null;
 					while (true) {
 						entRes = OrgService.RetrieveMultiple(downTarg.Query);
 						foreach (var res in entRes.Entities) {
-							entList.Add(res);
+							if (!files.Any() || files.Contains(res.GetAttributeValue<string>(downTarg.Name)))
+								entList.Add(res);
 						}
 						Console.WriteLine("Currently " + entList.Count + " records in queue...");
 
@@ -214,22 +226,10 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 			}
 		}
 
-		static string PrettyXml(string xml, Entity e) {
-			DownloadReportDefinitionResponse resp = null;
-			try {
-				var req = new DownloadReportDefinitionRequest() {
-					ReportId = e.Id,
-				};
-
-				resp = orgServ.Execute(req) as DownloadReportDefinitionResponse;
-			}
-			catch (Exception ex) {
-				Console.WriteLine("Report not supported " + ex.Message);
-				return null;
-			}
+		static string XmlPretty (string xml, Entity e) {
 			var stringBuilder = new StringBuilder();
 
-			var element = XElement.Parse(resp.BodyText);
+			var element = XElement.Parse(xml);
 
 			var settings = new XmlWriterSettings();
 			settings.OmitXmlDeclaration = false;
@@ -247,36 +247,42 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 				ms.Position = 0;
 				outstr = sr.ReadToEnd();
 			}
-			
-
-			/*
-			if (xml.Contains("SELECT crmaf_filteredgfc_unittransactions.gfc_unittransactionsid,")) {
-				var dodgy = xml.Replace("\"&amp;chrw(10)&amp;\"", "\n");
-				Console.WriteLine();
-			}
-
-			System.Text.RegularExpressions.Regex reg = new System.Text.RegularExpressions.Regex("\"?(?:\\&amp;)?chrw\\((\\d+)\\)(?:&amp;)?\"?");
-
-			var matches = reg.Matches(outstr);
-
-			outstr = reg.Replace(outstr, delegate (Match m) {
-				int i;
-				int.TryParse(m.Groups[m.Groups.Count - 1].Value, out i);
-				return "" + (char)i;
-			});
-
-			outstr = outstr.Replace("&amp;chrw(10)&amp;", "\n");
-			outstr = outstr.Replace("&amp;chrw(13)&amp;", "\r");
-			outstr = outstr.Replace("&amp;chrw(39)&amp;", "'");
-			outstr = outstr.Replace("&amp;chrw(40)&amp;", "(");
-			outstr = outstr.Replace("&amp;chrw(41)&amp;", ")");
-			outstr = outstr.Replace("&amp;chrw(61)&amp;", "=");
-			//outstr = outstr.Replace("\"&amp;", "");
-			//outstr = outstr.Replace("&amp;\"", "");
-			outstr = outstr.Replace("&amp;", "&");
-			*/
 
 			return outstr;
+		}
+
+		static string ImportMapDownload(string xml, Entity e) {
+			ExportMappingsImportMapResponse resp = null;
+			try {
+				var req = new ExportMappingsImportMapRequest() {
+					ImportMapId = e.Id,
+				};
+
+				resp = orgServ.Execute(req) as ExportMappingsImportMapResponse;
+			}
+			catch (Exception ex) {
+				Console.WriteLine("ImportMap not supported " + ex.Message);
+				return null;
+			}
+
+			return XmlPretty(resp.MappingsXml, null);
+		}
+
+		static string ReportDownload(string xml, Entity e) {
+			DownloadReportDefinitionResponse resp = null;
+			try {
+				var req = new DownloadReportDefinitionRequest() {
+					ReportId = e.Id,
+				};
+
+				resp = orgServ.Execute(req) as DownloadReportDefinitionResponse;
+			}
+			catch (Exception ex) {
+				Console.WriteLine("Report not supported " + ex.Message);
+				return null;
+			}
+
+			return XmlPretty(resp.BodyText, null);
 		}
 	}
 }
