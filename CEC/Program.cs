@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using CEC.Extensions;
 using IniParser.Model;
 using Microsoft.Xrm.Sdk.Query;
+using System.Diagnostics;
+using System.Management;
 
 namespace CEC {
 	class Program : ProgramBase {
@@ -24,6 +26,11 @@ namespace CEC {
 
 			argsPrefix = "";
 			ParseArgs(args);
+
+			if (System.Diagnostics.Debugger.IsAttached) {
+				Console.WriteLine("Press anykey to exit");
+				Console.ReadKey();
+			}
 		}
 
 		static void Help() {
@@ -31,8 +38,9 @@ namespace CEC {
 			Console.WriteLine(@"cec help:
 :S");
 
+
 			if (IsCec()) {
-				Console.ForegroundColor = ConsoleColor.Green;
+				ConCol = ConsoleColor.Green;
 				LoadCec();
 				var name = config["org"]["name"];
 				if (name == null)
@@ -43,7 +51,7 @@ namespace CEC {
 				Console.WriteLine("This is " + name + ".");
 			}
 			else if (IsGit()) {
-				Console.ForegroundColor = ConsoleColor.Yellow;
+				ConCol = ConsoleColor.Yellow;
 				Console.WriteLine("You could use this folder for CEC");
 				string maybename = null;
 				try {
@@ -55,10 +63,10 @@ namespace CEC {
 				}
 			}
 			else {
-				Console.ForegroundColor = ConsoleColor.Red;
+				ConCol = ConsoleColor.Red;
 				Console.WriteLine("You cannot CEC here, try a git repo.");
 			}
-			Console.ResetColor();
+			ConColReset();
 		}
 
 		static bool IsGit() {
@@ -109,9 +117,9 @@ namespace CEC {
 				LoadCec();
 
 			if (config == null) {
-				Console.ForegroundColor = ConsoleColor.Red;
+				ConCol = ConsoleColor.Red;
 				Console.WriteLine("CEC not configured.");
-				Console.ResetColor();
+				ConColReset();
 				return args.Length;
 			}
 
@@ -127,15 +135,14 @@ namespace CEC {
 				});
 
 				if (res != null && res.Entities != null && res.Entities.Count == 1) {
-					Console.ForegroundColor = ConsoleColor.Green;
+					ConCol = ConsoleColor.Green;
 					Console.WriteLine("CEC can connect!");
 				}
 				else {
-					Console.ForegroundColor = ConsoleColor.Red;
+					ConCol = ConsoleColor.Red;
 					Console.WriteLine("CEC can not connect!");
-
 				}
-				Console.ResetColor();
+				ConColReset();
 			}
 
 			return args.Length;

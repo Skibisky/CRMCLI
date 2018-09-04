@@ -1,8 +1,10 @@
 using Microsoft.Xrm.Sdk;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management;
 
 namespace CEC.Extensions {
 	public abstract class ProgramBase {
@@ -14,6 +16,59 @@ namespace CEC.Extensions {
 		protected static bool autoConnect = true;
 
 		protected static string argsPrefix = "-";
+
+		private static string parProcName = null;
+		public static string ParProcName {
+			get {
+				if (parProcName == null)
+					parProcName = GetParentProcessName();
+				return parProcName;
+			}
+		}
+		private static string GetParentProcessName() {
+			var myId = Process.GetCurrentProcess().Id;
+			var query = string.Format("SELECT ParentProcessId FROM Win32_Process WHERE ProcessId = {0}", myId);
+			var search = new ManagementObjectSearcher("root\\CIMV2", query);
+			var queryObj = search.Get().OfType<ManagementBaseObject>().FirstOrDefault();
+			if (queryObj == null) {
+				return null;
+			}
+			var parentId = (uint)queryObj["ParentProcessId"];
+			var parent = Process.GetProcessById((int)parentId);
+			return parent.ProcessName;
+		}
+
+		public static readonly Dictionary<ConsoleColor, string> colCodes = new Dictionary<ConsoleColor, string>() {
+			{ ConsoleColor.Black, "0;30" },
+			{ ConsoleColor.Red, "0;31" },
+			{ ConsoleColor.Green, "0;32" },
+			{ ConsoleColor.Blue, "0;34" },
+			{ ConsoleColor.Magenta, "0:35" },
+			{ ConsoleColor.Cyan, "0;36" },
+			{ ConsoleColor.Gray, "0;37" },
+			{ ConsoleColor.DarkGray, "1;30" },
+			{ ConsoleColor.Yellow, "1;33" },
+			{ ConsoleColor.White, "1;37" },
+		};
+
+		public static ConsoleColor ConCol {
+			get {
+				return Console.ForegroundColor;
+			}
+			set {
+				Console.ForegroundColor = value;
+				if (ProgramBase.ParProcName == "bash" && colCodes.ContainsKey(value)) {
+					Console.Write($"\u001b[{colCodes[value]}m");
+				}
+			}
+		}
+
+		public static void ConColReset() {
+			if (ProgramBase.ParProcName == "bash") {
+				Console.Write("\u001b[0m");
+			}
+			Console.ResetColor();
+		}
 
 		private static ProgramBase _single = null;
 		private static ProgramBase Single {
@@ -72,10 +127,18 @@ namespace CEC.Extensions {
 							i += kv.FirstOrDefault().Value.Invoke(aa);
 						}
 						else {
-							Console.WriteLine("Couldn't match:");
-							foreach (var p in kv) {
-								Console.WriteLine("\t" + p.Key);
+							ConCol = ConsoleColor.Red;
+							Console.Write("Couldn't match");
+							if (!kv.Any()) {
+								Console.WriteLine(": " + args[i]);
 							}
+							else {
+								Console.WriteLine(" from:");
+								foreach (var p in kv) {
+									Console.WriteLine("\t" + p.Key);
+								}
+							}
+							ConColReset();
 						}
 					}
 				}
