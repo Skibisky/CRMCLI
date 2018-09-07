@@ -88,6 +88,7 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 				Console.WriteLine("Do what with " + files.Count + " files?");
 				var comms = Console.ReadLine();
 				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
+				argsParsed = false;
 				ParseArgs(args);
 			}
 

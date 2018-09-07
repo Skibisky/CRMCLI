@@ -1,3 +1,4 @@
+using IniParser.Model;
 using Microsoft.Xrm.Sdk;
 using System;
 using System.Collections.Generic;
@@ -5,6 +6,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace CEC.Extensions {
 	public abstract class ProgramBase {
@@ -12,8 +15,10 @@ namespace CEC.Extensions {
 		protected static readonly HashSet<string> files = new HashSet<string>();
 		protected static IOrganizationService orgService = null;
 		public static IOrganizationService OrgService { get { return orgService; } }
-		static bool argsParsed = false;
+		protected static bool argsParsed = false;
+		protected static bool cecChecked = false;
 		protected static bool autoConnect = true;
+		public static bool Verbose { get; set; } = false;
 
 		protected static string argsPrefix = "-";
 
@@ -130,6 +135,11 @@ namespace CEC.Extensions {
 		}
 
 		protected static void ParseArgs(Dictionary<string, Func<string[], int>> commlines, params string[] args) {
+			CheckCec();
+			if (argsParsed) {
+				Console.Out.Verbose("Skipping args");
+				return;
+			}
 			int i = 0;
 			for (; i < args.Length; i++) {
 				if (string.IsNullOrWhiteSpace(argsPrefix) || args[i].StartsWith(argsPrefix)) {
@@ -166,6 +176,59 @@ namespace CEC.Extensions {
 				}
 			}
 			argsParsed = true;
+		}
+
+
+		protected static bool IsCec() {
+			return Directory.Exists(".cec") && File.Exists(".cec/config");
+		}
+
+		public static void pauseDebugger(string action = "continue") {
+			if (System.Diagnostics.Debugger.IsAttached) {
+				Console.WriteLine("Press anykey to " + action + "...");
+				Console.ReadKey();
+			}
+		}
+
+		protected static IniData config;
+		protected static void LoadCec() {
+			var p = new IniParser.FileIniDataParser();
+			try {
+				config = p.ReadFile(".cec/config");
+			}
+			catch {
+				config = new IniData();
+			}
+		}
+
+		protected static void CheckCec() {
+			if (cecChecked) {
+				Console.Out.Verbose("Skipping cec check");
+				return;
+			}
+			if (IsCec()) {
+				LoadCec();
+				ConnectCec();
+			}
+		}
+
+		protected static void ConnectCec() {
+			var url = config["org"]["url"];
+			var user = config["org"]["user"];
+			var oPass = config["org"]["pass"];
+
+			var passB = Convert.FromBase64String(oPass);
+			var passU = ProtectedData.Unprotect(passB, new byte[0], DataProtectionScope.CurrentUser);
+			var passS = Encoding.Default.GetString(passU);
+			string pass;
+			if (passS.Contains("legit:")) {
+				pass = passS.Replace("legit:", "");
+			}
+			else {
+				Console.WriteLine("Enter Password for " + user + ":" + url);
+				pass = Console.ReadLine();
+			}
+			ConnectArgs(new string[] { url, user, pass });
 		}
 
 		protected static int ConnectArgs(string[] args) {

@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLI.CustomisationDownloader
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CEC", "CEC\CEC.csproj", "{E9413536-B91F-47AF-948F-C19993FA15BD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLI.DataDownloader", "CLI.DataDownloader\CLI.DataDownloader.csproj", "{A6F83FB1-62F8-467F-9C92-D7DCB7BA9302}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -63,6 +65,10 @@ Global
 		{E9413536-B91F-47AF-948F-C19993FA15BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E9413536-B91F-47AF-948F-C19993FA15BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E9413536-B91F-47AF-948F-C19993FA15BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6F83FB1-62F8-467F-9C92-D7DCB7BA9302}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6F83FB1-62F8-467F-9C92-D7DCB7BA9302}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6F83FB1-62F8-467F-9C92-D7DCB7BA9302}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6F83FB1-62F8-467F-9C92-D7DCB7BA9302}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

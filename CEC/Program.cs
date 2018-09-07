@@ -27,10 +27,7 @@ namespace CEC {
 			argsPrefix = "";
 			ParseArgs(args);
 
-			if (System.Diagnostics.Debugger.IsAttached) {
-				Console.WriteLine("Press anykey to exit");
-				Console.ReadKey();
-			}
+			pauseDebugger();
 		}
 
 		static void Help() {
@@ -74,20 +71,6 @@ namespace CEC {
 			return Directory.Exists(".git") && File.Exists(".git/config");
 		}
 		
-		static bool IsCec() {
-			return Directory.Exists(".cec") && File.Exists(".cec/config");
-		}
-
-		static void LoadCec() {
-			var p = new IniParser.FileIniDataParser();
-			try {
-				config = p.ReadFile(".cec/config");
-			}
-			catch {
-				config = new IniData();
-			}
-		}
-
 		static IniData LoadGit() {
 			var p = new IniParser.FileIniDataParser();
 			return p.ReadFile(".git/config");
@@ -100,7 +83,6 @@ namespace CEC {
 		}
 
 		static bool closeNow = true;
-		private static IniData config;
 
 		protected override Dictionary<string, Func<string[], int>> getArgDic() {
 			return new Dictionary<string, Func<string[], int>>() {
@@ -152,27 +134,22 @@ namespace CEC {
 				return args.Length;
 			}
 
-			if (orgService == null) {
-				var url = config["org"]["url"];
-				var user = config["org"]["user"];
-				var oPass = config["org"]["pass"];
-				var pass = Encoding.Default.GetString(ProtectedData.Unprotect(Convert.FromBase64String(oPass), new byte[0], DataProtectionScope.CurrentUser)).Replace("legit:","");
-				ConnectArgs(new string[] { url, user, pass });
+			if (orgService == null)
+				ConnectCec();
 
-				var res = OrgService.RetrieveMultiple(new QueryExpression("systemuser") {
-					TopCount = 1,
-				});
+			var res = OrgService.RetrieveMultiple(new QueryExpression("systemuser") {
+				TopCount = 1,
+			});
 
-				if (res != null && res.Entities != null && res.Entities.Count == 1) {
-					ConCol = ConsoleColor.Green;
-					Console.WriteLine("CEC can connect!");
-				}
-				else {
-					ConCol = ConsoleColor.Red;
-					Console.WriteLine("CEC can not connect!");
-				}
-				ConColReset();
+			if (res != null && res.Entities != null && res.Entities.Count == 1) {
+				ConCol = ConsoleColor.Green;
+				Console.WriteLine("CEC can connect!");
 			}
+			else {
+				ConCol = ConsoleColor.Red;
+				Console.WriteLine("CEC can not connect!");
+			}
+			ConColReset();
 
 			return args.Length;
 		}

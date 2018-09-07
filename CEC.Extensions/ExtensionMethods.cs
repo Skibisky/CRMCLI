@@ -12,6 +12,7 @@ using Microsoft.Xrm.Tooling.Connector;
 
 namespace CEC.Extensions {
 	public static class ExtensionMethods {
+		
 		public class OrgQuery {
 			private readonly IOrganizationService orgService;
 			private QueryExpression qe = null;
@@ -84,6 +85,12 @@ namespace CEC.Extensions {
 				return new CrmServiceClient($"AuthType=Office365; Url={crmuri}; UserName={user}; Password={pass}");
 				var u = new Uri(crmuri);
 				return new CrmServiceClient(new NetworkCredential(user, pass), u.Host, u.Port.ToString(), u.Host.Substring(0, u.Host.IndexOf(".")));
+			}
+		}
+
+		public static void Verbose(this TextWriter write, string data) {
+			if (ProgramBase.Verbose) {
+				write.WriteLine(data);
 			}
 		}
 
