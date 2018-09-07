@@ -60,6 +60,7 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 		}
 
 		static void Main(string[] args) {
+			debug(new string[0]);
 			var splash = "CRM Customisation Downloader prelease-" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
 			Console.WriteLine(new string('=', splash.Length));
 			Console.WriteLine(splash);

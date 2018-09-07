@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.ServiceModel.Description;
+using Microsoft.Xrm.Tooling.Connector;
 
 namespace CEC.Extensions {
 	public static class ExtensionMethods {

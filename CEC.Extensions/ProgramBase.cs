@@ -92,6 +92,21 @@ namespace CEC.Extensions {
 			}
 		}
 
+		protected static int debug(string[] args) {
+			Console.WriteLine("Attach console or anykey to continue...");
+			while (!System.Diagnostics.Debugger.IsAttached) {
+				if (!Console.IsInputRedirected && Console.KeyAvailable)
+					break;
+			}
+			if (System.Diagnostics.Debugger.IsAttached) {
+				Console.WriteLine("Debugger detected...");
+			}
+
+			ParseArgs(args.Skip(1).ToArray());
+
+			return 0;
+		}
+
 		protected static void BaseMain(string[] args) {
 			ParseArgs(args);
 			if (OrgService == null && autoConnect) {
@@ -154,6 +169,7 @@ namespace CEC.Extensions {
 		}
 
 		protected static int ConnectArgs(string[] args) {
+			System.Net.ServicePointManager.SecurityProtocol = System.Net.SecurityProtocolType.Tls12;
 			Uri u;
 			if (!Uri.TryCreate(args[0], UriKind.Absolute, out u))
 				return 0;

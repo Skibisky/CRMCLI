@@ -53,14 +53,15 @@ namespace CEC {
 			else if (IsGit()) {
 				ConCol = ConsoleColor.Yellow;
 				Console.WriteLine("You could use this folder for CEC");
-				string maybename = null;
+				string maybename = "it's";
+				string maybebranch = "?";
 				try {
-					maybename = LoadGit()["remote \"origin\""]["url"];
-					Console.WriteLine("Make sure that '" + maybename + "' is the right place.");
+					maybename = "'" + LoadGit()["remote \"origin\""]["url"] + "'";
+					maybebranch = " on " + File.ReadAllText(".git/HEAD").Replace("ref: refs/heads/", "").Replace("\n", "");
 				}
 				catch {
-					Console.WriteLine("Make sure that it's is the right place.");
 				}
+					Console.WriteLine("Make sure that " + maybename + maybebranch + " is the right place.");
 			}
 			else {
 				ConCol = ConsoleColor.Red;
@@ -106,9 +107,37 @@ namespace CEC {
 				{ "init", init },
 				{ "edit", edit },
 				{ "test", test },
+				{ "debug", debug },
+				{ "custdl", customisationDownloader },
 			};
 		}
 
+		static int customisationDownloader(string[] args) {
+			ProcessStartInfo info = new ProcessStartInfo() {
+				Arguments = string.Join(" ", args.Skip(1)),
+				CreateNoWindow = true,
+				RedirectStandardInput = true,
+				RedirectStandardError = true,
+				RedirectStandardOutput = true,
+				UseShellExecute = false,
+				WorkingDirectory = Environment.CurrentDirectory,
+				FileName = "CustomisationDownloader.exe",
+			};
+			var p = new Process();
+			p.StartInfo = info;
+			p.OutputDataReceived += (s, e) => {
+				Console.WriteLine(e.Data);
+			};
+			p.ErrorDataReceived += (s, e) => {
+				Console.WriteLine(e.Data);
+			};
+			p.Start();
+			p.BeginOutputReadLine();
+			p.BeginErrorReadLine();
+
+			p.WaitForExit();
+			return 0;
+		}
 
 		static int test(string[] args) {
 			closeNow = true;
@@ -155,27 +184,24 @@ namespace CEC {
 					Console.Write("leave blank for: \"" + v + "\",");
 				}
 				Console.WriteLine("ctrl+z to skip)");
-				var akey = Console.ReadKey();
-				if (akey.Modifiers == ConsoleModifiers.Control && akey.Key == ConsoleKey.Z) {
-					return null;
-				}
-				if (akey.Key == ConsoleKey.Enter) {
-					return v;
-				}
 
 				if (pa) {
 					string op = "";
-					do {
-						op += akey.KeyChar;
+					ConsoleKeyInfo akey = Console.ReadKey();
+					while (akey.Key != ConsoleKey.Enter) {
 						Console.CursorLeft = Console.CursorLeft - 1;
 						Console.Write("*");
+						op += akey.KeyChar;
 						akey = Console.ReadKey();
 					}
-					while (akey.Key != ConsoleKey.Enter);
 					return op;
 				}
 
-				var val = akey.KeyChar + Console.ReadLine().Replace(Environment.NewLine, ""); ;
+				var str = Console.ReadLine();
+				if (str == null || str.Contains("\u001a"))
+					return null;
+
+				var val = str.Replace(Environment.NewLine, ""); ;
 				if (string.IsNullOrWhiteSpace(val))
 					return v;
 				return val;
