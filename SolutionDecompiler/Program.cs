@@ -7,12 +7,15 @@ using System.Text;
 using System.IO;
 using System.Xml;
 
+[assembly:CecType(typeof(SolutionDecompiler.SolutionDecompiler))]
 namespace SolutionDecompiler {
-	class Program : ProgramBase {
+	public class SolutionDecompiler : ProgramBase {
+		public SolutionDecompiler() {
+			autoConnect = false;
+		}
 
 		static void Main(string[] args) {
-			autoConnect = false;
-			BaseMain(args);
+			new SolutionDecompiler().Start(args);
 		}
 
 		bool? direction = null;
@@ -20,6 +23,10 @@ namespace SolutionDecompiler {
 		static bool explodeEntities = false;
 
 		public static readonly Encoding OutEncoding = Encoding.UTF8;
+
+		private static string killChars = "\\\"?/<>:";
+
+		public override string ShortName { get { return "soldec"; } }
 
 		protected override Dictionary<string, Func<string[], int>> getArgDic() {
 			return new Dictionary<string, Func<string[], int>>() {
@@ -29,7 +36,12 @@ namespace SolutionDecompiler {
 			};
 		}
 
-		protected override void SubMain() {
+		public override void Help() {
+			HelpDefault();
+			Console.WriteLine("Please give me a customization.xml file :)");
+		}
+
+		public override void Execute(string[] args) {
 			try {
 				var doc = new XmlDocument();
 
@@ -307,8 +319,6 @@ namespace SolutionDecompiler {
 				}
 			}
 		}
-
-		private static string killChars = "\\\"?/<>:";
 
 		private static void ExtractWorkflows(XmlDocument doc) {
 			var nodeCols = doc.GetElementsByTagName("Workflows");
@@ -599,6 +609,5 @@ namespace SolutionDecompiler {
 				}
 			}
 		}
-
 	}
 }

@@ -79,10 +79,10 @@ namespace CEC.Extensions {
 			}
 			
 			try {
-				return new OrganizationServiceProxy(new Uri(crmuri + "/XRMServices/2011/Organization.svc"), null, creds, null);
+				return new CrmServiceClient($"AuthType=Office365; Url={crmuri}; UserName={user}; Password={pass}");
 			}
 			catch {
-				return new CrmServiceClient($"AuthType=Office365; Url={crmuri}; UserName={user}; Password={pass}");
+				return new OrganizationServiceProxy(new Uri(crmuri + "/XRMServices/2011/Organization.svc"), null, creds, null);
 				var u = new Uri(crmuri);
 				return new CrmServiceClient(new NetworkCredential(user, pass), u.Host, u.Port.ToString(), u.Host.Substring(0, u.Host.IndexOf(".")));
 			}

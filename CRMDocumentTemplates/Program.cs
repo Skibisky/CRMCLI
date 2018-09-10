@@ -5,8 +5,9 @@ using System.IO;
 using System.Linq;
 using CEC.DocumentTemplates.DCE;
 
+[assembly:CecType(typeof(CEC.DocumentTemplates.CLI.DocumentTemplates))]
 namespace CEC.DocumentTemplates.CLI {
-	class Program : ProgramBase {
+	class DocumentTemplates : ProgramBase {
 		#region Arguments
 		static bool doUpload = false;
 		static bool doBackup = false;
@@ -28,7 +29,9 @@ namespace CEC.DocumentTemplates.CLI {
 		}
 		#endregion
 
-		static void Help() {
+		public override string ShortName { get { return "doctemp"; } }
+
+		public override void Help() {
 			Console.WriteLine(@"Usage:
 CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [template1 ...]] [[-u | -r] template1 ...]
 	-h Help: Display this help
@@ -43,36 +46,23 @@ CRMDocumentTemplates [-h] [-o URI [user pass]] [-b [template1 ...]] [[-c | -d] [
 ");
 		}
 
-		static void Main(string[] args) {
+		public override void Splash() {
 			var splash = "CRM Document Template tool prelease-" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
 			Console.WriteLine(new string('=', splash.Length));
 			Console.WriteLine(splash);
 			Console.WriteLine(new string('-', splash.Length));
 			Console.WriteLine("From " + Environment.CurrentDirectory);
-
-			if (args.Length == 0) {
-				Console.WriteLine("Enter arguments:");
-				var comms = Console.ReadLine();
-				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
-			}
-			if (args.Length == 0) {
-				Help();
-				return;
-			}
-
-			ParseArgs(typeof(Program), args);
-
-			if (files.Count > 0 && doRetrieve && !doUpload && !doBackup && !doCompile) {
-				Console.WriteLine("Do what with " + files.Count + " files?");
-				var comms = Console.ReadLine();
-				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
-				ParseArgs(args);
-			}
-
-			BaseMain(args);
 		}
 
-		protected override void SubMain() {
+		public DocumentTemplates() {
+			this.NoCommands = () => doRetrieve && !doUpload && !doBackup && !doCompile;
+		}
+
+		static void Main(string[] args) {
+			new DocumentTemplates().Start(args);
+		}
+
+		public override void Execute(string[] args) {
 			try {
 				if (doRetrieve && doUpload) {
 					Console.Error.WriteLine("Cannot retrieve and upload at the same time :(");

@@ -15,14 +15,19 @@ namespace CEC.Extensions {
 		protected static readonly HashSet<string> files = new HashSet<string>();
 		protected static IOrganizationService orgService = null;
 		public static IOrganizationService OrgService { get { return orgService; } }
-		protected static bool argsParsed = false;
+		protected bool argsParsed = false;
 		protected static bool cecChecked = false;
-		protected static bool autoConnect = true;
+		protected bool autoConnect = true;
 		public static bool Verbose { get; set; } = false;
-
-		protected static string argsPrefix = "-";
-
+		protected Func<bool> NoCommands = () => false;
 		private static string parProcName = null;
+
+		protected virtual string argsPrefix {
+			get {
+				return "-";
+			}
+		}
+
 		public static string ParProcName {
 			get {
 				if (parProcName == null)
@@ -75,29 +80,110 @@ namespace CEC.Extensions {
 			Console.ResetColor();
 		}
 
-		private static ProgramBase _single = null;
-		private static ProgramBase Single {
-			get {
-				if (_single == null) {
-					var asms = AppDomain.CurrentDomain.GetAssemblies();
-					List<Type> types = new List<Type>();
-					foreach (var asm in asms) {
-						var type = asm.GetTypes();
-						types.AddRange(type.Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(ProgramBase))));
-					}
-					if (types.Count != 1) {
-						Console.WriteLine("Too many ProgramBase derivitives loaded.");
-						return null;
-					}
-					var y = types.Single();
-					var c = y.GetConstructor(new Type[0]);
-					_single = (ProgramBase)c.Invoke(new object[0]);
+		public void Start(string[] args) {
+			Splash();
+			if (this.PromptCommands) {
+				if (args.Length == 0) {
+					Console.WriteLine("Enter arguments:");
+					var comms = Console.ReadLine();
+					args = ExtensionMethods.SplitCommandLine(comms).ToArray();
 				}
-				return _single;
+			}
+			if (args.Length == 0) {
+				Help();
+				if (DebuggerPauseOnEnd)
+					pauseDebugger();
+				return;
+			}
+
+			ParseArgs(args);
+
+			if (this.PromptNoCommands && files.Count > 0 && this.NoCommands()) {
+				Console.WriteLine("Do what with " + files.Count + " files?");
+				var comms = Console.ReadLine();
+				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
+				argsParsed = false;
+				ParseArgs(args);
+			}
+
+			try {
+				this.Execute(args);
+			}
+			catch (Exception e) {
+				Console.WriteLine(e.GetType() + ": " + e.Message);
+				Console.WriteLine(e.StackTrace);
+			}
+			if (DebuggerPauseOnEnd)
+				pauseDebugger();
+		}
+
+		/// <summary>
+		/// Trigger from CEC.exe
+		/// </summary>
+		public abstract string ShortName { get; }
+		public virtual string FullName { get { return this.GetType().Name; } }
+
+		/// <summary>
+		/// If to stop and ask for things if run with no args
+		/// </summary>
+		public virtual bool PromptCommands { get { return true; } }
+
+		/// <summary>
+		/// if this.NoCommands returns true, prompt for commands
+		/// </summary>
+		public virtual bool PromptNoCommands { get { return true; } }
+
+		public bool DebuggerPauseOnEnd { get; set; } = true;
+
+		public bool SupressSplash { get; set; } = false;
+
+		public bool SupressArgErrors { get; set; } = false;
+
+		/// <summary>
+		/// Show a splash if you want
+		/// </summary>
+		public virtual void Splash() {
+			if (SupressSplash)
+				return;
+
+			var splash = "CEC " + this.FullName + " v." + version();
+			Console.WriteLine(new string('=', splash.Length));
+			Console.WriteLine(splash);
+			Console.WriteLine(new string('-', splash.Length));
+			Console.WriteLine("From " + Environment.CurrentDirectory);
+		}
+
+		public string version() {
+			return this.GetType().Assembly.GetName().Version.ToString();
+		}
+
+		/// <summary>
+		/// Print to the console how-to
+		/// </summary>
+		public abstract void Help();
+
+		/// <summary>
+		/// Output a cheesy help based on argDic
+		/// </summary>
+		public void HelpDefault() {
+			var acceptArgs = this.getArgDic();
+			Console.Write(this.GetType().Name);
+			if (!string.IsNullOrWhiteSpace(this.ShortName))
+				Console.Write(" -- " + this.ShortName);
+			Console.WriteLine(" usage:");
+			Console.WriteLine();
+			foreach (var arg in acceptArgs) {
+				Console.WriteLine("\t" + argsPrefix + arg.Key);
 			}
 		}
 
-		protected static int debug(string[] args) {
+		/// <summary>
+		/// Actually do something
+		/// </summary>
+		/// <param name="args">Passed in for safety, already parsed.</param>
+		public abstract void Execute(string[] args);
+		
+		protected int debug(string[] args) {
 			Console.WriteLine("Attach console or anykey to continue...");
 			while (!System.Diagnostics.Debugger.IsAttached) {
 				if (!Console.IsInputRedirected && Console.KeyAvailable)
@@ -111,30 +197,9 @@ namespace CEC.Extensions {
 
 			return 0;
 		}
-
-		protected static void BaseMain(string[] args) {
-			ParseArgs(args);
-			if (OrgService == null && autoConnect) {
-				Console.WriteLine("Connection defaulting to localhost...");
-				orgService = ExtensionMethods.Connect("http://localhost");
-			}
-			Single.SubMain();
-		}
-
-		protected abstract void SubMain();
-
-		protected static void ParseArgs(params string[] args) {
-			ParseArgs(Single.getArgDic(), args);
-		}
-
-		protected static void ParseArgs(Type prog, params string[] args) {
-			var c = prog.GetConstructor(new Type[0]);
-			var p = (ProgramBase)c.Invoke(new object[0]);
-			_single = p;
-			ParseArgs(Single.getArgDic(), args);
-		}
-
-		protected static void ParseArgs(Dictionary<string, Func<string[], int>> commlines, params string[] args) {
+		
+		protected void ParseArgs(params string[] args) {
+			Dictionary<string, Func<string[], int>> commlines = this.getArgDic();
 			CheckCec();
 			if (argsParsed) {
 				Console.Out.Verbose("Skipping args");
@@ -143,15 +208,16 @@ namespace CEC.Extensions {
 			int i = 0;
 			for (; i < args.Length; i++) {
 				if (string.IsNullOrWhiteSpace(argsPrefix) || args[i].StartsWith(argsPrefix)) {
-					if (commlines.ContainsKey(args[i].Substring(argsPrefix.Length)))
+					if (commlines.ContainsKey(args[i].Substring(argsPrefix.Length))) {
 						i += commlines[args[i].Substring(argsPrefix.Length)].Invoke(args.Skip(i).ToArray());
+					}
 					else {
 						var kv = commlines.Where(p => p.Key[0] == args[i][argsPrefix.Length]);
 						if (kv.Count() == 1) {
 							var aa = args.Skip(i + 1).ToArray();
 							i += kv.FirstOrDefault().Value.Invoke(aa);
 						}
-						else {
+						else if (!SupressArgErrors) {
 							ConCol = ConsoleColor.Red;
 							Console.Write("Couldn't match");
 							if (!kv.Any()) {
@@ -178,7 +244,6 @@ namespace CEC.Extensions {
 			argsParsed = true;
 		}
 
-
 		protected static bool IsCec() {
 			return Directory.Exists(".cec") && File.Exists(".cec/config");
 		}
@@ -201,15 +266,19 @@ namespace CEC.Extensions {
 			}
 		}
 
-		protected static void CheckCec() {
+		protected void CheckCec() {
 			if (cecChecked) {
+				if (autoConnect && OrgService == null)
+					ConnectCec();
 				Console.Out.Verbose("Skipping cec check");
 				return;
 			}
 			if (IsCec()) {
 				LoadCec();
-				ConnectCec();
+				if (autoConnect)
+					ConnectCec();
 			}
+			cecChecked = true;
 		}
 
 		protected static void ConnectCec() {

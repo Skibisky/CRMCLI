@@ -12,8 +12,9 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
+[assembly:CEC.Extensions.CecType(typeof(CEC.CustomisationDownloader.CLI.CustomisationDownloader))]
 namespace CEC.CustomisationDownloader.CLI {
-	class Program : ProgramBase {
+	public class CustomisationDownloader : ProgramBase {
 		static bool doUpload = false;
 		static bool doDownload = false;
 		protected static readonly HashSet<string> types = new HashSet<string>();
@@ -23,11 +24,13 @@ namespace CEC.CustomisationDownloader.CLI {
 				{ "target", (a) => { return GetTypes(a); }},
 				{ "download", (a) => { doDownload = true; return GetFiles(a); }},
 				{ "upload", (a) => { doUpload = true; return GetFiles(a); }},
-				{"org", (a) => {return ConnectArgs(a);}},
+				{ "org", (a) => {return ConnectArgs(a);}},
 			};
 		}
+		
+		public override string ShortName { get { return "custdl"; } }
 
-		static IOrganizationService orgServ { get; set; }
+		public override string FullName { get { return "Customisation Downloader"; } }
 
 		protected static int GetTypes(string[] args) {
 			int i = 0;
@@ -39,7 +42,7 @@ namespace CEC.CustomisationDownloader.CLI {
 			return i;
 		}
 
-		static void Help() {
+		public override void Help() {
 			Console.WriteLine(@"Usage:
 CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ...]
 	-h Help: Display this help
@@ -59,40 +62,12 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 ");
 		}
 
-		static void Main(string[] args) {
-			debug(new string[0]);
-			var splash = "CRM Customisation Downloader prelease-" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
-			Console.WriteLine(new string('=', splash.Length));
-			Console.WriteLine(splash);
-			Console.WriteLine(new string('-', splash.Length));
-			Console.WriteLine("From " + Environment.CurrentDirectory);
-
-			if (args.Length == 0) {
-				Console.WriteLine("Enter arguments:");
-				var comms = Console.ReadLine();
-				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
-			}
-			if (args.Length == 0) {
-				Help();
-				return;
-			}
-
-			ParseArgs(typeof(Program), args);
-
-			if (types.Contains("?")) {
-				HelpTypes();
-				return;
-			}
-
-			if (files.Count > 0 && !doUpload && !doDownload) {
-				Console.WriteLine("Do what with " + files.Count + " files?");
-				var comms = Console.ReadLine();
-				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
-				argsParsed = false;
-				ParseArgs(args);
-			}
-
-			BaseMain(args);
+		public CustomisationDownloader() {
+			NoCommands = () => { return !doUpload && !doDownload; };
+		}
+		
+		public static void Main(string[] args) {
+			new CustomisationDownloader().Start(args);
 		}
 
 		class DownloadTarget {
@@ -147,8 +122,11 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 			},
 		};
 
-		protected override void SubMain() {
-			orgServ = OrgService;
+		public override void Execute(string[] args) {
+			if (types.Contains("?")) {
+				HelpTypes();
+				return;
+			}
 
 			foreach (var t in types) {
 				try {
@@ -218,13 +196,8 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 
 				}
 				catch {
-
+					throw;
 				}
-			}
-
-			if (System.Diagnostics.Debugger.IsAttached) {
-				Console.WriteLine("Press anykey to exit...");
-				Console.ReadKey();
 			}
 		}
 
@@ -260,7 +233,7 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 					ImportMapId = e.Id,
 				};
 
-				resp = orgServ.Execute(req) as ExportMappingsImportMapResponse;
+				resp = OrgService.Execute(req) as ExportMappingsImportMapResponse;
 			}
 			catch (Exception ex) {
 				Console.WriteLine("ImportMap not supported " + ex.Message);
@@ -277,7 +250,7 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 					ReportId = e.Id,
 				};
 
-				resp = orgServ.Execute(req) as DownloadReportDefinitionResponse;
+				resp = OrgService.Execute(req) as DownloadReportDefinitionResponse;
 			}
 			catch (Exception ex) {
 				Console.WriteLine("Report not supported " + ex.Message);
@@ -286,5 +259,6 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 
 			return XmlPretty(resp.BodyText, null);
 		}
+		
 	}
 }

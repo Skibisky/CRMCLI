@@ -7,25 +7,34 @@ using System.Threading.Tasks;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Crm.Sdk.Messages;
 
-namespace CLI.DataDownloader {
-	class Program : ProgramBase {
+[assembly:CecType(typeof(CEC.DataDownloader.CLI.DataDownloader))]
+namespace CEC.DataDownloader.CLI {
+	public class DataDownloader : ProgramBase {
 
 		static bool showUnimportable = false;
 		static bool showBadAttrs = false;
 
-		static void Main(string[] args) {
+		public override string ShortName { get { return "datadl"; } }
 
-			if (args.Length == 0) {
-				Console.WriteLine("Enter arguments:");
-				var comms = Console.ReadLine();
-				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
-			}
-			if (args.Length == 0) {
-				Help();
-				return;
-			}
+		public static void Main(string[] args) {
+			new DataDownloader().Start(args);
+		}
 
-			ParseArgs(args);
+		public static int Test(string[] args) {
+			return 0;
+		}
+
+		[Obsolete]
+		public static int Orher(string[] args) {
+			return 0;
+		}
+
+		public override void Execute(string[] args) {
+			Func<string[], int> eag = Test;
+			Func<string[], int> eagg = Orher;
+			System.Reflection.MethodInfo info = eag.Method;
+			System.Reflection.MethodInfo inffo = eagg.Method;
+
 
 			var allResp = orgService.Execute(new RetrieveAllEntitiesRequest() {
 				EntityFilters = Microsoft.Xrm.Sdk.Metadata.EntityFilters.Entity,
@@ -66,17 +75,11 @@ namespace CLI.DataDownloader {
 				if (showBadAttrs || (at.IsValidForCreate ?? false))
 					Console.WriteLine(at.LogicalName);
 			}
-
-			if ("" == null) {
-
-			}
-
+			
 			// TODO: write out a CSV for the fields
-
-			pauseDebugger();
 		}
 
-		static void Help() {
+		public override void Help() {
 			Console.WriteLine(@"Usage:
 DataDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ...]
 	-h Help: Display this help
@@ -92,8 +95,6 @@ DataDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ...]
 				
 			};
 		}
-
-		protected override void SubMain() {
-		}
+		
 	}
 }

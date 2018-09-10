@@ -10,31 +10,28 @@ using IniParser.Model;
 using Microsoft.Xrm.Sdk.Query;
 using System.Diagnostics;
 using System.Management;
+using System.Reflection;
 
 namespace CEC {
-	class Program : ProgramBase {
-		static void Main(string[] args) {
-			if (System.Diagnostics.Debugger.IsAttached && args.Length == 0) {
-				Console.WriteLine("Enter arguments:");
-				var comms = Console.ReadLine();
-				args = ExtensionMethods.SplitCommandLine(comms).ToArray();
-			}
-			if (args.Length == 0) {
-				Help();
-				return;
-			}
+	public class Cec : ProgramBase {
 
-			argsPrefix = "";
-			ParseArgs(args);
-
-			pauseDebugger();
+		public Cec() {
+			autoConnect = false;
+			SupressSplash = true;
+			SupressArgErrors = true;
 		}
 
-		static void Help() {
+		protected override string argsPrefix { get { return ""; } }
 
-			Console.WriteLine(@"cec help:
-:S");
+		public override string ShortName { get { return "cec"; } }
 
+		static void Main(string[] args) {
+			new Cec().Start(args);
+		}
+
+		public override void Help() {
+
+			Console.WriteLine(@"cec :3");
 
 			if (IsCec()) {
 				ConCol = ConsoleColor.Green;
@@ -65,6 +62,11 @@ namespace CEC {
 				Console.WriteLine("You cannot CEC here, try a git repo.");
 			}
 			ConColReset();
+
+			Console.WriteLine();
+			foreach (var ps in Starters) {
+				Console.WriteLine("\t" + ps.Key);
+			}
 		}
 
 		static bool IsGit() {
@@ -90,11 +92,24 @@ namespace CEC {
 				{ "edit", edit },
 				{ "test", test },
 				{ "debug", debug },
-				{ "custdl", customisationDownloader },
 			};
 		}
 
+		static int dataDownloader(string[] args) {
+			CEC.DataDownloader.CLI.DataDownloader.Main(args);
+			return 0;
+		}
+
 		static int customisationDownloader(string[] args) {
+			var qw = new CustomisationDownloader.CLI.CustomisationDownloader();
+			qw.DebuggerPauseOnEnd = false;
+			qw.Start(args.Skip(1).ToArray());
+			
+
+			//CEC.CustomisationDownloader.CLI.CustomisationDownloader.Main(args.Skip(1).ToArray());
+
+			return 0;
+
 			ProcessStartInfo info = new ProcessStartInfo() {
 				Arguments = string.Join(" ", args.Skip(1)),
 				CreateNoWindow = true,
@@ -229,10 +244,79 @@ namespace CEC {
 			return args.Length;
 		}
 
-		protected override void SubMain() {
+		private IEnumerable<Type> GetCecTypes() {
+			var exes = Directory.EnumerateFiles(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "*.exe");
+			foreach (var e in exes.Where(ex => !ex.Contains(".vshost") && !ex.Contains("\\cec.exe"))) {
+				// TODO: sandbox this loading, check for customattrs
+				var assem = Assembly.LoadFile(e);
+			}
 
+			var ass = AppDomain.CurrentDomain.GetAssemblies();
+			var cecAss = ass.Where(a => a.GetCustomAttribute<CecTypeAttribute>() != null);
 
+			List<Type> types = new List<Type>();
+			foreach (var a in cecAss) {
+				var cecType = a.GetCustomAttribute<CecTypeAttribute>().CecType;
+				types.Add(cecType);
+			}
+			cecTypes = types;
+			return types;
+		}
 
+		private IEnumerable<Type> cecTypes = null;
+		public IEnumerable<Type> CecTypes {
+			get {
+				if (cecTypes == null) {
+					GetCecTypes();
+				}
+				return cecTypes;
+			}
+		}
+
+		public class ProgramStarter {
+			Type cecType;
+
+			public ProgramStarter(Type t) {
+				if (!typeof(ProgramBase).IsAssignableFrom(t)) {
+					throw new InvalidOperationException(t.Name + " isn't a ProgramBase.");
+				}
+				cecType = t;
+			}
+
+			public T Start<T>() where T : ProgramBase {
+				var ctor = cecType.GetConstructor(new Type[0]);
+				return (T)ctor.Invoke(new object[0]);
+			}
+		}
+
+		private Dictionary<string, ProgramStarter> starters = null;
+		public Dictionary<string, ProgramStarter> Starters {
+			get {
+				if (starters == null) {
+					RegenStarters();
+				}
+				return starters;
+			}
+		}
+
+		public void RegenStarters() {
+			if (starters == null)
+				starters = new Dictionary<string, ProgramStarter>();
+			foreach (var t in CecTypes) {
+				ProgramStarter ps = new ProgramStarter(t);
+				var pb = ps.Start<ProgramBase>();
+				starters[pb.ShortName] = ps;
+			}
+		}
+
+		public override void Execute(string[] args) {
+			if (Starters.ContainsKey(args.FirstOrDefault())) {
+				var pb = Starters[args.FirstOrDefault()].Start<ProgramBase>();
+				pb.DebuggerPauseOnEnd = false;
+				pb.Start(args.Skip(1).ToArray());
+				return;
+			}
+			Console.WriteLine("Found no CecType: " + args.FirstOrDefault());
 		}
 	}
 }

@@ -77,6 +77,14 @@
       <Project>{ee779c4f-9bb4-497b-8057-e646b7c50f3e}</Project>
       <Name>CEC.Extensions</Name>
     </ProjectReference>
+    <ProjectReference Include="..\CLI.CustomisationDownloader\CLI.CustomisationDownloader.csproj">
+      <Project>{d48fdee2-516d-438c-8d1a-2ef400f7c7c0}</Project>
+      <Name>CLI.CustomisationDownloader</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CLI.DataDownloader\CLI.DataDownloader.csproj">
+      <Project>{a6f83fb1-62f8-467f-9c92-d7dcb7ba9302}</Project>
+      <Name>CLI.DataDownloader</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
