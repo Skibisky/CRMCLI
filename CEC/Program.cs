@@ -25,6 +25,8 @@ namespace CEC {
 
 		public override string ShortName { get { return "cec"; } }
 
+		static bool supressCon = false;
+
 		static void Main(string[] args) {
 			new Cec().Start(args);
 		}
@@ -92,47 +94,20 @@ namespace CEC {
 				{ "edit", edit },
 				{ "test", test },
 				{ "debug", debug },
+				{ "set", set },
+				{ "sup", supress },
 			};
 		}
 
-		static int dataDownloader(string[] args) {
-			CEC.DataDownloader.CLI.DataDownloader.Main(args);
+		static int set(string[] args) {
+
+			// set .cec config vars and stuff
+
 			return 0;
 		}
 
-		static int customisationDownloader(string[] args) {
-			var qw = new CustomisationDownloader.CLI.CustomisationDownloader();
-			qw.DebuggerPauseOnEnd = false;
-			qw.Start(args.Skip(1).ToArray());
-			
-
-			//CEC.CustomisationDownloader.CLI.CustomisationDownloader.Main(args.Skip(1).ToArray());
-
-			return 0;
-
-			ProcessStartInfo info = new ProcessStartInfo() {
-				Arguments = string.Join(" ", args.Skip(1)),
-				CreateNoWindow = true,
-				RedirectStandardInput = true,
-				RedirectStandardError = true,
-				RedirectStandardOutput = true,
-				UseShellExecute = false,
-				WorkingDirectory = Environment.CurrentDirectory,
-				FileName = "CustomisationDownloader.exe",
-			};
-			var p = new Process();
-			p.StartInfo = info;
-			p.OutputDataReceived += (s, e) => {
-				Console.WriteLine(e.Data);
-			};
-			p.ErrorDataReceived += (s, e) => {
-				Console.WriteLine(e.Data);
-			};
-			p.Start();
-			p.BeginOutputReadLine();
-			p.BeginErrorReadLine();
-
-			p.WaitForExit();
+		static int supress (string[] args) {
+			supressCon = true;
 			return 0;
 		}
 
@@ -310,13 +285,21 @@ namespace CEC {
 		}
 
 		public override void Execute(string[] args) {
-			if (Starters.ContainsKey(args.FirstOrDefault())) {
-				var pb = Starters[args.FirstOrDefault()].Start<ProgramBase>();
+
+			var targs = Starters.Keys.Intersect(args);
+			var prog = targs.FirstOrDefault();
+			var skip = args.ToList().IndexOf(prog);
+			
+
+			if (Starters.ContainsKey(prog)) {
+				var pb = Starters[prog].Start<ProgramBase>();
 				pb.DebuggerPauseOnEnd = false;
-				pb.Start(args.Skip(1).ToArray());
+				if (supressCon)
+					pb.autoConnect = false;
+				pb.Start(args.Skip(skip + 1).ToArray());
 				return;
 			}
-			Console.WriteLine("Found no CecType: " + args.FirstOrDefault());
+			Console.WriteLine("Found no CecType: " + prog);
 		}
 	}
 }

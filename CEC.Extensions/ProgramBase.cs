@@ -17,7 +17,7 @@ namespace CEC.Extensions {
 		public static IOrganizationService OrgService { get { return orgService; } }
 		protected bool argsParsed = false;
 		protected static bool cecChecked = false;
-		protected bool autoConnect = true;
+		public bool autoConnect = true;
 		public static bool Verbose { get; set; } = false;
 		protected Func<bool> NoCommands = () => false;
 		private static string parProcName = null;
@@ -82,13 +82,15 @@ namespace CEC.Extensions {
 
 		public void Start(string[] args) {
 			Splash();
-			if (this.PromptCommands) {
+
+			if (this.PromptCommands || System.Diagnostics.Debugger.IsAttached) {
 				if (args.Length == 0) {
 					Console.WriteLine("Enter arguments:");
 					var comms = Console.ReadLine();
 					args = ExtensionMethods.SplitCommandLine(comms).ToArray();
 				}
 			}
+
 			if (args.Length == 0) {
 				Help();
 				if (DebuggerPauseOnEnd)
@@ -126,7 +128,15 @@ namespace CEC.Extensions {
 		/// <summary>
 		/// If to stop and ask for things if run with no args
 		/// </summary>
-		public virtual bool PromptCommands { get { return true; } }
+		public virtual bool PromptCommands {
+			get {
+#if DEBUG
+				return true;
+#else
+				return false;
+#endif
+			}
+		}
 
 		/// <summary>
 		/// if this.NoCommands returns true, prompt for commands
@@ -212,7 +222,7 @@ namespace CEC.Extensions {
 						i += commlines[args[i].Substring(argsPrefix.Length)].Invoke(args.Skip(i).ToArray());
 					}
 					else {
-						var kv = commlines.Where(p => p.Key[0] == args[i][argsPrefix.Length]);
+						var kv = commlines.Where(p => p.Key[0] == args[i][argsPrefix.Length] && args[i].Length == 2);
 						if (kv.Count() == 1) {
 							var aa = args.Skip(i + 1).ToArray();
 							i += kv.FirstOrDefault().Value.Invoke(aa);

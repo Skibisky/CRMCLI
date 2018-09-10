@@ -11,8 +11,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using IniParser.Model;
 
-[assembly:CEC.Extensions.CecType(typeof(CEC.CustomisationDownloader.CLI.CustomisationDownloader))]
+[assembly: CEC.Extensions.CecType(typeof(CEC.CustomisationDownloader.CLI.CustomisationDownloader))]
 namespace CEC.CustomisationDownloader.CLI {
 	public class CustomisationDownloader : ProgramBase {
 		static bool doUpload = false;
@@ -25,12 +26,17 @@ namespace CEC.CustomisationDownloader.CLI {
 				{ "download", (a) => { doDownload = true; return GetFiles(a); }},
 				{ "upload", (a) => { doUpload = true; return GetFiles(a); }},
 				{ "org", (a) => {return ConnectArgs(a);}},
+				{ "set", set },
 			};
 		}
-		
-		public override string ShortName { get { return "custdl"; } }
+
+		public override string ShortName { get { return StaticName; } }
+		// ugh
+		private const string StaticName = "custdl";
 
 		public override string FullName { get { return "Customisation Downloader"; } }
+
+		private static IniData custdlConfig;
 
 		protected static int GetTypes(string[] args) {
 			int i = 0;
@@ -44,8 +50,9 @@ namespace CEC.CustomisationDownloader.CLI {
 
 		public override void Help() {
 			Console.WriteLine(@"Usage:
-CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ...]
+CustomisationDownloader [-h] [-set] [-o URI [user pass]] [-t type ...] -d | -u [file ...]
 	-h Help: Display this help
+	-s Set: change a custdl setting
 	-o Org: URI [user pass]
 		Connects to the CRM specified by URI with user pass.
 		If user pass isn't specified, will use Default Network Creds.
@@ -55,17 +62,102 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 ");
 		}
 
+		public static void HelpSet(string item) {
+			switch (item) {
+				case "":
+					Console.WriteLine("set: will try to change a config setting for custdl");
+					foreach (var s in settable) {
+						Console.WriteLine(s);
+					}
+					break;
+				case "map":
+					Console.WriteLine("map: will remap the output directory for a target.");
+					Console.WriteLine("Required Arguments: <Target> <Relative Path>");
+					Console.WriteLine("Try 'custdl -t ?' for Target types");
+					break;
+				default:
+					Console.WriteLine("No help for: " + item);
+					break;
+			}
+		}
+
+		static string[] settable = new string[] { "map" };
+
+		protected static int set(string[] args) {
+			try {
+				if (args.Length <= 1) {
+					HelpSet("");
+					return 0;
+				}
+				if (settable.Contains(args[1])) {
+					var setThis = args[1];
+					if (args.Length == 2) {
+						switch (setThis) {
+							// TODO: insert 1 arg sized sets
+							default:
+								HelpSet(setThis);
+								break;
+						}
+					}
+					if (args.Length == 3) {
+						switch (setThis) {
+							// TODO: insert 2 arg sized sets
+							default:
+								HelpSet(setThis);
+								break;
+						}
+					}
+					if (args.Length >= 4) {
+						switch (setThis) {
+							// TODO: insert 3 arg sized sets
+							case "map":
+								if (typeQueries.Keys.Contains(args[2])) {
+									custdlConfig["map"][args[2]] = args[3];
+									Console.WriteLine("Set " + args[2] + " to be downloaded to " + args[3]);
+								}
+								else {
+									HelpTypes();
+								}
+								return 3;
+								break;
+							default:
+								HelpSet(setThis);
+								break;
+						}
+					}
+					return 0;
+				}
+				else {
+					Console.WriteLine("Couldn't set: " + args[1]);
+
+					return 0;
+				}
+			}
+			finally {
+				var p = new IniParser.FileIniDataParser();
+				p.WriteFile(".cec/" + StaticName, custdlConfig);
+			}
+		}
+
 		static void HelpTypes() {
-			Console.WriteLine(@"Types:
-		report
-		javascript
-");
+			Console.WriteLine(@"Types:");
+			foreach (var t in typeQueries) {
+				Console.WriteLine("\t" + t.Key);
+			}
 		}
 
 		public CustomisationDownloader() {
 			NoCommands = () => { return !doUpload && !doDownload; };
+			var p = new IniParser.FileIniDataParser();
+			if (IsCec() && File.Exists(".cec/" + ShortName)) {
+				custdlConfig = p.ReadFile(".cec/" + ShortName);
+			}
+			else {
+				custdlConfig = new IniData();
+				p.WriteFile(".cec/" + ShortName, custdlConfig);
+			}
 		}
-		
+
 		public static void Main(string[] args) {
 			new CustomisationDownloader().Start(args);
 		}
@@ -79,7 +171,7 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 			public string FileExten;
 		}
 
-		private Dictionary<string, DownloadTarget> typeQueries = new Dictionary<string, DownloadTarget>() {
+		private static Dictionary<string, DownloadTarget> typeQueries = new Dictionary<string, DownloadTarget>() {
 			{ "reports", new DownloadTarget() {
 				Name = "name",
 				Filename = "filename",
@@ -169,8 +261,15 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 						}
 					}
 
+					var targDir = t;
+					if (custdlConfig != null && custdlConfig.Sections.ContainsSection("map")) {
+						if (custdlConfig["map"].ContainsKey(t))
+							targDir = custdlConfig["map"][t];
+					}
 
-					System.IO.Directory.CreateDirectory(t);
+					Console.WriteLine("Writing to: " + targDir);
+
+					System.IO.Directory.CreateDirectory(targDir);
 					foreach (var r in entList) {
 						if (r.Attributes.ContainsKey(downTarg.Filename) && r.Attributes.ContainsKey(downTarg.Data)) {
 							var data = r.GetAttributeValue<string>(downTarg.Data);
@@ -186,7 +285,7 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 								fname = Path.ChangeExtension(fname, downTarg.FileExten);
 							}
 
-							File.WriteAllText(t + "/" + fname, data);
+							File.WriteAllText(targDir + "/" + fname, data);
 							Console.WriteLine("Downloaded " + r.GetAttributeValue<string>(downTarg.Filename));
 						}
 						else {
@@ -201,7 +300,7 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 			}
 		}
 
-		static string XmlPretty (string xml, Entity e) {
+		static string XmlPretty(string xml, Entity e) {
 			var stringBuilder = new StringBuilder();
 
 			var element = XElement.Parse(xml);
@@ -259,6 +358,6 @@ CustomisationDownloader [-h] [-o URI [user pass]] [-t type ...] -d | -u [file ..
 
 			return XmlPretty(resp.BodyText, null);
 		}
-		
+
 	}
 }
