@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -110,6 +111,10 @@ namespace CEC.Extensions {
 
 			try {
 				this.Execute(args);
+			}
+			catch (TargetInvocationException e) when (e.InnerException != null) {
+				Console.WriteLine(e.InnerException.GetType() + ": " + e.InnerException.Message);
+				Console.WriteLine(e.InnerException.StackTrace);
 			}
 			catch (Exception e) {
 				Console.WriteLine(e.GetType() + ": " + e.Message);

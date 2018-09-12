@@ -149,12 +149,14 @@ CustomisationDownloader [-h] [-set] [-o URI [user pass]] [-t type ...] -d | -u [
 		public CustomisationDownloader() {
 			NoCommands = () => { return !doUpload && !doDownload; };
 			var p = new IniParser.FileIniDataParser();
-			if (IsCec() && File.Exists(".cec/" + ShortName)) {
-				custdlConfig = p.ReadFile(".cec/" + ShortName);
-			}
-			else {
-				custdlConfig = new IniData();
-				p.WriteFile(".cec/" + ShortName, custdlConfig);
+			if (IsCec()) {
+				if (File.Exists(".cec/" + ShortName)) {
+					custdlConfig = p.ReadFile(".cec/" + ShortName);
+				}
+				else {
+					custdlConfig = new IniData();
+					p.WriteFile(".cec/" + ShortName, custdlConfig);
+				}
 			}
 		}
 
